@@ -20,7 +20,7 @@ def feq_func(E, EF, T=0):
 
 def check_f_boundaries(f, thresh=0.01):
     '''
-    Given an (n bands) x (Nkx kx points) x (Nky ky points) array of values for
+    Given an N(=4) x Nky x Nkx array of values for
     the Fermi-Dirac distribution, checks if the values are above a threshold
     along the boundaries of the k space spanned by kx and ky.
     '''
