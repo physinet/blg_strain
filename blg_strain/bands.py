@@ -18,6 +18,7 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
     - theta: angle of uniaxial strain to zigzag axis
 
     Returns:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
     - Kx, Ky: Nky x Nkx meshgrid of kx, ky points
     - E: N(=4) x Nky x Nkx array of energy eigenvalues
     - Psi: N(=4) x N(=4) x Nky x Nkx array of eigenvectors
@@ -32,7 +33,7 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
     E, Psi, Omega, Mu = _get_bands(kx, ky, xi=xi, Delta=Delta, delta=delta,
                         theta=theta)
 
-    return Kx, Ky, E, Psi, Omega, Mu
+    return kx, ky, Kx, Ky, E, Psi, Omega, Mu
 
 def _get_bands(kx, ky, xi=1, **params):
     '''
@@ -41,7 +42,6 @@ def _get_bands(kx, ky, xi=1, **params):
 
     Parameters:
     - Kx, Ky: Nky x Nkx meshgrid of kx, ky points
-    - params: passed to
     - xi: valley index (+1 for K, -1 for K')
     - params: passed to `hamiltonian.H_func`
 
