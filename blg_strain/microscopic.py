@@ -45,7 +45,7 @@ def feq_func(E, EF, T=0):
     Fermi-Dirac distribution for calculating electron or hole occupation
 
     Arguments:
-    - E: Energy (eV) - an array
+    - E: Energy (eV) - an array with arbitrary dimensions
     - EF: Fermi energy (eV)
     - T: Temperature (K)
     '''
