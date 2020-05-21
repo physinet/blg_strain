@@ -19,30 +19,26 @@ def berry_mu(E, Psi, xi=1):
     - Omega: n(=4) x Nky x Nkx array of Berry curvature (units m^2)
     - Mu: n(=4) x Nky x Nkx array of magnetic moment (units Bohr magneton)
     '''
-    hdkx, hdky = H_dkx(xi), H_dky()
+    hdkx, hdky = H_dkx(xi), H_dky()  # 4x4 matrices
 
-    # Convert to matrices to make multiplication easier
-    hdkx = np.matrix(hdkx)
-    hdky = np.matrix(hdky)
-
-    Omega = np.empty(E.shape[0]) # length 4 array
-    Mu = np.empty(E.shape[0])
+    Omega = np.zeros_like(E)  # 4 x Nky x Nkx
+    Mu = np.zeros_like(E)
 
     for n, (e_n, psi_n) in enumerate(zip(E, Psi)):
-        psi_n = np.matrix(psi_n).T # transpose to a column vector
-        for e_m, psi_m in zip(E, Psi):
-            if e_n == e_m: # sum runs over n != m
+        for m, (e_m, psi_m) in enumerate(zip(E, Psi)):
+            if n == m: # sum runs over n != m
                 continue
 
-            psi_m = np.matrix(psi_m).T # transpose to a column vector
+            # Calculate matrix products using einstein notation
+            # These are inner products <n|H'|m> (H' derivative of Hamiltonian)
+            # i and l index the components of the eigenvectors for bands n and m
+            # the H' matrix is indexed with il to contract these indices
+            # j and k index over the kx, ky points and are the dimensions left
+            prod1 = np.einsum('ijk,il,ljk->jk', psi_n.conj(), hdkx, psi_m)
+            prod2 = np.einsum('ijk,il,ljk->jk', psi_m.conj(), hdky, psi_n)
 
-            # Using .H for Hermitian conjugate
-            # .item() extracts the number from the 1x1 resulting matrix
-            num = ((psi_n.H @ hdkx @ psi_m) * (psi_m.H @ hdky @ psi_n)).item()
-            denom = e_n - e_m
-
-            Omega[n] += np.imag(num / (denom) ** 2)
-            Mu[n] += np.imag(num / denom)
+            Omega[n] += np.imag(prod1 * prod2 / (e_n - e_m) ** 2)
+            Mu[n] += np.imag(prod1 * prod2 / (e_n - e_m))
 
     Omega = -2 * Omega
     Mu = -q / hbar * Mu / muB  # -> Bohr magnetons
