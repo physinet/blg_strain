@@ -21,7 +21,8 @@ def meff_func(kx, ky, E):
         The 2nd/3rd dimensions index over ky and kx
         The 4th/5th dimensions are the 2x2 effective mass tensor
     '''
-    E_dky, E_dkx = np.gradient(E, ky, kx, axis=(1,2), edge_order=2) # axis1 = y, axis2 = x
+    E_dky, E_dkx = np.gradient(E, ky, kx, axis=(1,2), edge_order=2) # axis1 = y
+                                                                    # axis2 = x
 
     E_dkx_dky, E_dkx_dkx = np.gradient(E_dkx, ky, kx, axis=(1,2), edge_order=2)
     E_dky_dky, E_dky_dkx = np.gradient(E_dky, ky, kx, axis=(1,2), edge_order=2)
@@ -37,8 +38,7 @@ def meff_func(kx, ky, E):
     oneoverm[:, :, :, 1, 1] = E_dky_dky / hbar**2
 
     # np.linalg.inv will operate over last two axes
-    return np.linalg.inv(oneoverm) / m_e # m_e divided by q already to take care of eV -> J conversion
-
+    return np.linalg.inv(oneoverm) / m_e  # m_e definition takes care of eV -> J
 
 def feq_func(E, EF, T=0):
     '''

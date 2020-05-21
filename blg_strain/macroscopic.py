@@ -23,9 +23,9 @@ def n_xi_func(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
     check_f_boundaries(feq)
 
     if (layer == 1 and xi == 1) or (layer == 2 and xi == -1):
-        weight = abs(Psi[:, 0, :, :])**2 + abs(Psi[:, 3, :, :])**2
+        weight = abs(Psi[:, 0, :, :]) ** 2 + abs(Psi[:, 3, :, :]) ** 2
     elif (layer == 2 and xi == 1) or (layer == 1 and xi == -1):
-        weight = abs(Psi[:, 1, :, :])**2 + abs(Psi[:, 2, :, :])**2
+        weight = abs(Psi[:, 1, :, :]) ** 2 + abs(Psi[:, 2, :, :]) ** 2
 
     integrand = (2 * 2 / (2 * np.pi) ** 2) * feq * weight
     # The integrand is an N(=4) x Nky x Nkx array

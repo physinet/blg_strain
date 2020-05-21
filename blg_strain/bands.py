@@ -51,11 +51,6 @@ def _get_bands(Kx, Ky, xi=1, **params):
     - Omega: N(=4) x Nky x Nkx array of berry curvature
     - Mu: N(=4) x Nky x Nkx array of magnetic moment
     '''
-    #
-    # E = np.zeros((4, len(ky), len(kx)))
-    # Psi = np.zeros((4, 4, len(ky), len(kx)), dtype='complex')
-    # Omega = np.zeros((4, len(ky), len(kx)))
-    # Mu = np.zeros((4, len(ky), len(kx)))
 
     H = Hfunc(Kx, Ky, xi=xi, **params)
 
@@ -87,7 +82,6 @@ def _get_bands(Kx, Ky, xi=1, **params):
 
     # Now E[n, 0, 0] and Psi[n, :, 0, 0] give the energy and eigenstates
 
-    # Omega, Mu = berry_mu(E, Psi, xi=xi)
-    Omega, Mu = None, None #TODO
+    Omega, Mu = berry_mu(E, Psi, xi=xi)
 
     return E, Psi, Omega, Mu
