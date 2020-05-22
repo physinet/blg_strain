@@ -75,3 +75,44 @@ def check_f_boundaries(f, thresh=0.01):
                 below_threshold = False
         if not below_threshold:
             print('F-D dist in band %i not smaller than %f at boundaries!' %(n, thresh))
+
+def grad_feq_func(kx, ky, E, EF, T=0):
+    '''
+    Gradient of Fermi-Dirac distribution (calculated using gradient of feq_func)
+
+    Because grad_feq is sharply peaked, I would not expect this to perform well.
+
+    Arguments:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - E: Energy (eV) - an ... x Nky x Nkx array
+    - EF: Fermi energy (eV)
+    - T: Temperature (K)
+
+    Returns:
+    - f_dkx, f_dky - components of gradient of feq (each with same shape as E)
+    '''
+    f = feq_func(E, EF, T)
+    f_dky, f_dkx = np.gradient(f, ky, kx, axis=(-2,-1))
+
+    return f_dkx, f_dky
+
+def grad_feq_func_2(kx, ky, E, EF, T=0):
+    '''
+    Gradient of Fermi-Dirac distribution (calculated using gradient of energy)
+
+    Arguments:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - E: Energy (eV) - an ... x Nky x Nkx array
+    - EF: Fermi energy (eV)
+    - T: Temperature (K)
+
+    Returns:
+    - f_dkx, f_dky - components of gradient of feq (each with same shape as E)
+    '''
+    if T < 1e-2:
+        T = 1e-2 # small but finite to avoid dividing by zero
+    E_dky, E_dkx = np.gradient(E, ky, kx, axis=(-2, -1))
+
+    sech2 = np.cosh((E - EF) / (2 * kB * T)) ** -2
+
+    return [-EE/(4 * kB * T) * sech2 for EE in (E_dkx, E_dky)]
