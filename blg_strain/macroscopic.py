@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import simps
 from .microscopic import feq_func, check_f_boundaries
+from .utils.const import q, hbar
 
 def n_xi_func(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
     '''
@@ -55,3 +56,37 @@ def ntot_func(kx, ky, E, Psi, EF, T=0):
     for layer in [1, 2]:
         n += n_func(kx, ky, E, Psi, EF, T=T, layer=layer)
     return n
+
+def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
+    '''
+    Integrates over K space to get orbital magnetization for one valley.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    Params:
+    - E: N(=4) x Nky x Nkx array of energy eigenvalues
+    - Omega: N(=4) x Nky x Nkx array of berry curvature
+    - Mu: N(=4) x Nky x Nkx array of magnetic moment
+    - Efield: length-2 array of electric field x/y components (V/m)
+    - tau: scattering time (s). In general an Nky x Nkx array.
+    - EF: Fermi energy (eV)
+    - T: temperature (K)
+    '''
+    Ex, Ey = np.array(Efield)
+
+    feq = feq_func(E, EF, T)
+
+    E_dky, E_dkx = np.gradient(E, ky, kx, axis=(-2,-1))
+    Omega_dky, Omega_dkx = np.gradient(Omega, ky, kx, axis=(-2,-1))
+    Mu_dky, Mu_dkx = np.gradient(Mu, ky, kx, axis=(-2,-1))
+
+    integrandx = - q * tau * Ex / hbar / (2 * np.pi) ** 2 * feq * \
+                 (Mu_dkx + q * Omega_dkx / hbar * (EF-E) \
+                         - q * Omega / hbar * E_dkx)
+    integrandy = - q * tau * Ey / hbar / (2 * np.pi) ** 2 * feq * \
+                 (Mu_dky + q * Omega_dky / hbar * (EF-E) \
+                         - q * Omega / hbar * E_dky)
+
+    integral = simps(simps(integrandx + integrandy, kx, axis=-1), ky, axis=-1)
+
+    return integral.sum(axis=0) # sum over bands
