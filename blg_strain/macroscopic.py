@@ -1,19 +1,20 @@
 import numpy as np
 from scipy.integrate import simps
 from .microscopic import feq_func, check_f_boundaries
-from .utils.const import q, hbar
+from .utils.const import q, hbar, muB
 
-def n_xi_func(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
+def n_valley_layer(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
     '''
     Calculate the contribution to the carrier density on layer 1/2 from valley
-    K indexed by xi (K: 1, K': -1). This is an integral over the Brillouin zone
-    of the occupation function weighted by the wavefunction amplitudes on each
-    layer.
+    K or K' indexed by xi (K: 1, K': -1). This is an integral over the Brillouin
+    zone of the occupation function weighted by the wavefunction amplitudes on
+    each layer.
 
     In the K valley (xi=1), layer 1 corresponds to the first and last components
     of the (4-component) eigenvectors, while layer 2 corresponds to the middle
     two components. For the K' valley (xi=-1), this is reversed.
     '''
+    assert xi in [1, -1]
     assert layer in [1,2]
 
     feq = feq_func(E, EF, T)
@@ -38,35 +39,73 @@ def n_xi_func(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
     # We now sum over the bands
     return integral.sum()
 
-def n_func(kx, ky, E, Psi, EF, T=0, layer=1):
-    '''
-    Sums `n_xi_func` for each valley to get the total carrier density on the
-    specified layer.
-    '''
-    n = 0
-    for xi in [1, -1]:
-        n += n_xi_func(kx, ky, E, Psi, EF, T=T, xi=xi, layer=layer)
-    return n
 
-def ntot_func(kx, ky, E, Psi, EF, T=0):
+def n_layer(kx, ky, E1, E2, Psi1, Psi2, EF, T=0, layer=1):
     '''
-    Sums `n_func` for each layer to get total carrier density.
-    '''
-    n = 0
-    for layer in [1, 2]:
-        n += n_func(kx, ky, E, Psi, EF, T=T, layer=layer)
-    return n
-
-def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
-    '''
-    Integrates over K space to get orbital magnetization for one valley.
+    Calculate the contribution to the carrier density on layer 1/2 considering
+    both valleys.
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    Params:
+    - E1, E2: N(=4) x Nky x Nkx arrays of energy eigenvalues for valley K and K'
+    - Psi1, Psi2: N(=4) x N(=4) x Nky x Nkx arrays of eigenstates for K and K'
+    - EF: Fermi energy (eV)
+    - T: temperature (K)
+    - layer: layer number (1 or 2)
+    '''
+    assert layer in [1, 2]
+
+    n = n_valley_layer(kx, ky, E1, Psi1, EF, T=T, layer=layer) \
+      + n_valley_layer(kx, ky, E2, Psi2, EF, T=T, layer=layer)
+
+    return n
+
+
+def n_valley(kx, ky, E, EF, T=0):
+    '''
+    Integrates the Fermi-Dirac distribution to calculate the total carrier
+    density (in m^-2). This is the contribution from only one of the two valleys
+    with energy eigenvalues given in E.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - E: N(=4) x Nky x Nkx array of energy eigenvalues for valley K or K'
+    - EF: Fermi energy (eV)
+    - T: temperature (K)
+    '''
+
+    feq = feq_func(E, EF, T)
+    check_f_boundaries(feq)  # check if f is nearly zero at boundaries of region
+
+    integrand = 2 * 2 / (2 * np.pi) ** 2 * feq
+
+    # integrate and sum over bands
+    return simps(simps(integrand, kx, axis=-1), ky, axis=-1).sum()
+
+
+def ntot_func(kx, ky, E1, E2, EF, T=0):
+    '''
+    Integrates the Fermi-Dirac distribution to calculate the total carrier
+    density (in m^-2). This is the sum of contributions from both valleys.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - E1, E2: N(=4) x Nky x Nkx arrays of energy eigenvalues for valley K and K'
+    - EF: Fermi energy (eV)
+    - T: temperature (K)
+    '''
+    return n_valley(kx, ky, E1, EF, T=T) + n_valley(kx, ky, E2, EF, T=T)
+
+
+def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
+    '''
+    Integrates over k space to get orbital magnetization for one valley.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
     - E: N(=4) x Nky x Nkx array of energy eigenvalues
     - Omega: N(=4) x Nky x Nkx array of berry curvature
-    - Mu: N(=4) x Nky x Nkx array of magnetic moment
+    - Mu: N(=4) x Nky x Nkx array of magnetic moment (in Bohr magnetons)
     - Efield: length-2 array of electric field x/y components (V/m)
     - tau: scattering time (s). In general an Nky x Nkx array.
     - EF: Fermi energy (eV)
@@ -81,12 +120,34 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
     Mu_dky, Mu_dkx = np.gradient(Mu, ky, kx, axis=(-2,-1))
 
     integrandx = - q * tau * Ex / hbar / (2 * np.pi) ** 2 * feq * \
-                 (Mu_dkx + q * Omega_dkx / hbar * (EF-E) \
-                         - q * Omega / hbar * E_dkx)
+                 (Mu_dkx * muB + q * Omega_dkx / hbar * (EF-E) \
+                               - q * Omega / hbar * E_dkx)
     integrandy = - q * tau * Ey / hbar / (2 * np.pi) ** 2 * feq * \
-                 (Mu_dky + q * Omega_dky / hbar * (EF-E) \
-                         - q * Omega / hbar * E_dky)
+                 (Mu_dky * muB + q * Omega_dky / hbar * (EF-E) \
+                               - q * Omega / hbar * E_dky)
 
     integral = simps(simps(integrandx + integrandy, kx, axis=-1), ky, axis=-1)
 
     return integral.sum(axis=0) # sum over bands
+
+
+def D_func(kx, ky, E, Omega, EF=0, T=0):
+    '''
+    Integrates over k space to get Berry curvature dipole.
+    Integral is not summed over bands!
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    Params:
+    - E: N(=4) x Nky x Nkx array of energy eigenvalues
+    - Omega: N(=4) x Nky x Nkx array of berry curvature
+    - EF: Fermi energy (eV)
+    - T: temperature (K)
+    '''
+    feq = feq_func(E, EF, T)
+
+    Omega_dky, Omega_dkx = np.gradient(Omega, ky, kx, axis=(-2,-1))
+
+    integral = simps(simps(feq * Omega_dkx, kx, axis=-1), ky, axis=-1)
+
+    return integral # not summed over bands

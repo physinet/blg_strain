@@ -40,6 +40,7 @@ def meff_func(kx, ky, E):
     # np.linalg.inv will operate over last two axes
     return np.linalg.inv(oneoverm) / m_e  # m_e definition takes care of eV -> J
 
+
 def feq_func(E, EF, T=0):
     '''
     Fermi-Dirac distribution for calculating electron or hole occupation
@@ -53,9 +54,11 @@ def feq_func(E, EF, T=0):
     if T < 1e-10:
         T = 1e-10 # small but finite to avoid dividing by zero
     f = 1 / (1 + np.exp((E - EF) / (kB * T)))
-    f[E<0] = 1 - f[E < 0] # for holes
+    f[E<0] = -(1 - f[E < 0])  # hole occupation is 1-f, and we give it a (-)
+                              # so they contribute as (-) to carrier density
 
     return f
+
 
 def check_f_boundaries(f, thresh=0.01):
     '''
@@ -76,6 +79,7 @@ def check_f_boundaries(f, thresh=0.01):
         if not below_threshold:
             print('F-D dist in band %i not smaller than %f at boundaries!' %(n, thresh))
 
+
 def grad_feq_func(kx, ky, E, EF, T=0):
     '''
     Gradient of Fermi-Dirac distribution (calculated using gradient of feq_func)
@@ -95,6 +99,7 @@ def grad_feq_func(kx, ky, E, EF, T=0):
     f_dky, f_dkx = np.gradient(f, ky, kx, axis=(-2,-1))
 
     return f_dkx, f_dky
+
 
 def grad_feq_func_2(kx, ky, E, EF, T=0):
     '''

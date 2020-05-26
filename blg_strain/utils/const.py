@@ -28,6 +28,7 @@ v3 = np.sqrt(3) * a * gamma3 / (2 * hbar)
 v4 = np.sqrt(3) * a * gamma4 / (2 * hbar)
 
 # Estimated Gruneisen parameters
-eta0 = -2
+# eta0 = -2
+eta0 = -3  # less consistent with experiments but matches theory papers
 eta3 = -1
 eta4 = -1
