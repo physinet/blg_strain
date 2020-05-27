@@ -2,6 +2,7 @@
 
 import numpy as np
 from .utils.const import kB, hbar, m_e
+from scipy.interpolate import RectBivariateSpline
 
 def meff_func(kx, ky, E):
     '''
@@ -54,10 +55,33 @@ def feq_func(E, EF, T=0):
     if T < 1e-10:
         T = 1e-10 # small but finite to avoid dividing by zero
     f = 1 / (1 + np.exp((E - EF) / (kB * T)))
-    f[E<0] = -(1 - f[E < 0])  # hole occupation is 1-f, and we give it a (-)
+    f[E < 0] = -(1 - f[E < 0])  # hole occupation is 1-f, and we give it a (-)
                               # so they contribute as (-) to carrier density
 
     return f
+
+
+def feq_spline(kx, ky, E, EF, T=0, N=10000):
+    '''
+    Returns a spline interpolation for the Fermi-Dirac distribution. This is
+    useful at low temperature when the derivative of f is sharply peaked.
+
+    Arguments:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - E: Energy (eV) - an array with arbitrary dimensions
+    - EF: Fermi energy (eV)
+    - T: Temperature (K)
+    - N: number of points to use for the interpolation
+    '''
+    spl = RectBivariateSpline(kx, ky, E)
+
+    kxdense = np.linspace(kx.min(), kx.max(), N)
+    kydense = np.linspace(ky.min(), ky.max(), N)
+
+    Edense = spl(kxdense, kydense)
+    fdense = feq_func(Edense, EF, T=T)
+
+    return RectBivariateSpline(kxdense, kydense, fdense)
 
 
 def check_f_boundaries(f, thresh=0.01):
@@ -88,7 +112,7 @@ def grad_feq_func(kx, ky, E, EF, T=0):
 
     Arguments:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: Energy (eV) - an ... x Nkx x Nky array
+    - E: Energy (eV) - a ... x Nkx x Nky array
     - EF: Fermi energy (eV)
     - T: Temperature (K)
 

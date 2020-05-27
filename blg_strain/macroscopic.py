@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.integrate import simps
+from scipy.interpolate import RectBivariateSpline
+
 from .microscopic import feq_func, check_f_boundaries
 from .utils.const import q, hbar, muB
 
@@ -146,11 +148,16 @@ def D_valley(kx, ky, E, Omega, EF=0, T=0):
     '''
     feq = feq_func(E, EF, T)
 
-    Omega_dkx, Omega_dky = np.gradient(Omega, kx, ky, axis=(-2,-1))
+    N = E.shape[0]  # 4
+    D = np.empty(N)
 
-    integral = simps(simps(feq * Omega_dkx, ky, axis=-1), kx, axis=-1)
+    for n in range(N):
+        spl = RectBivariateSpline(kx, ky, Omega[n])
+        Omega_dkx = spl(kx, ky, dx=1)
+        spl2 = RectBivariateSpline(kx, ky, Omega_dkx * feq[n])  # integrand
+        D[n] = spl2.integral(kx.min(), kx.max(), ky.min(), ky.max())
 
-    return integral # not summed over bands
+    return D  # not summed over bands
 
 
 def D_func(kx, ky, E1, E2, Omega1, Omega2, EF=0, T=0):
