@@ -2,6 +2,7 @@ import numpy as np
 from .utils.const import nu, eta0, eta3, eta4, \
                          gamma0, gamma1, gamma3, gamma4, \
                          dab, v0, v3, v4, hbar
+from .utils.params import w
 
 def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     '''
@@ -25,8 +26,8 @@ def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     gamma1o = gamma1 * o
 
     # Gauge fields
-    w3 = 3 / 4 * np.exp(-1j*2*xi*theta)*(1+nu)*delta*(eta3 - eta0)*gamma3*o
-    w4 = 3 / 4 * np.exp(-1j*2*xi*theta)*(1+nu)*delta*(eta4 - eta0)*gamma4*o
+    w3 = w(delta, idx=3, xi=xi, theta=0) * o
+    w4 = w(delta, idx=4, xi=xi, theta=0) * o
 
     w3s = w3.conjugate()
     w4s = w4.conjugate()

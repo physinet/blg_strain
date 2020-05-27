@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-def plot_bands_3d(Kx, Ky, M, which=[0,1,2,3]):
+def plot_bands_3d(Kx, Ky, M, which=[0,1,2,3], cmap='bwr'):
     '''
     Makes a 3d plot of the values of M in each of the four bands.
 
@@ -11,12 +11,12 @@ def plot_bands_3d(Kx, Ky, M, which=[0,1,2,3]):
     ax = fig.add_subplot(111, projection='3d')
 
     for n in which:
-        ax.plot_surface(Kx, Ky, M[n], cmap='coolwarm')
+        ax.plot_surface(Kx, Ky, M[n], cmap=cmap)
 
     return fig, ax
 
 
-def plot_bands(Kx, Ky, M, contour=True):
+def plot_bands(Kx, Ky, M, contour=True, cmap='bwr'):
     '''
     Plots an 4 x Nky x Nkx matrix M as a colorplot vs Kx and Ky for each value of
     the first index.
@@ -27,7 +27,7 @@ def plot_bands(Kx, Ky, M, contour=True):
 
     for n in range(4):
         a = ax[n]
-        a.pcolormesh(Kx, Ky, M[n], cmap='coolwarm')
+        a.pcolormesh(Kx, Ky, M[n], cmap=cmap)
         if contour:
             a.contour(Kx, Ky, M[n], colors='k', linewidths=0.5,
                 linestyles='solid')
@@ -38,7 +38,8 @@ def plot_bands(Kx, Ky, M, contour=True):
 
     return fig, ax
 
-def plot_bands_KKprime(Kx, Ky, M, M1, contour=True):
+
+def plot_bands_KKprime(Kx, Ky, M, M1, contour=True, cmap='bwr'):
     '''
     Plots colorplots for the same quantity over 4 bands and at K and K'
     '''
@@ -47,8 +48,8 @@ def plot_bands_KKprime(Kx, Ky, M, M1, contour=True):
     for n in range(4):
         a = ax[0][n]
         a1 = ax[1][n]
-        a.pcolormesh(Kx, Ky, M[n], cmap='coolwarm')
-        a1.pcolormesh(Kx, Ky, M1[n], cmap='coolwarm')
+        a.pcolormesh(Kx, Ky, M[n], cmap=cmap)
+        a1.pcolormesh(Kx, Ky, M1[n], cmap=cmap)
         if contour:
             a.contour(Kx, Ky, M[n], colors='k', linewidths=0.5,
                 linestyles='solid')

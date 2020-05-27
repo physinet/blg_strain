@@ -11,7 +11,7 @@ eps0 = 8.8541878128e-12 # vacuum permittivity C/V*m
 # Graphene
 a = 0.246e-9 # meters, lattice constant for graphene
 d = 0.34e-9 # meters, interlayer distance for BLG
-A_BZ = 2 * np.sqrt(3) * (np.pi/a)**2  # area of Brillouin zone, m^-2
+A_BZ = 2 * np.sqrt(3) * (np.pi / a) ** 2  # area of Brillouin zone, m^-2
 
 nu = 0.165  # Poisson ratio for graphene (in general this should be that of the substrate)
 
@@ -19,8 +19,8 @@ nu = 0.165  # Poisson ratio for graphene (in general this should be that of the 
 gamma0 = 3.161
 gamma1 = 0.381
 gamma3 = 0.38
-gamma4 = 0.14
-dab = 0.022  # dimer asymmetry
+gamma4 = 0.14 * 0
+dab = 0.022 * 0 # dimer asymmetry
 
 # Fermi velocities m * eV / (eV * s) = m/s
 v0 = np.sqrt(3) * a * gamma0 / (2 * hbar)
