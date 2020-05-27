@@ -9,19 +9,19 @@ def berry_mu(E, Psi, xi=1):
     eigenvalues and eigenvectors for N(=4) bands.
 
     Params:
-    - E: N(=4) x Nky x Nkx array of energy eigenvalues
-    - Psi: N(=4) x N(=4) x Nky x Nkx array of energy eigenvectors.
+    - E: N(=4) x Nkx x Nky array of energy eigenvalues
+    - Psi: N(=4) x N(=4) x Nkx x Nky array of energy eigenvectors.
       The first dimension indexes the band, and the second dimension indexes
       components of the eigenvectors.
     - xi: valley index (+1 for K, -1 for K')
 
     Returns:
-    - Omega: n(=4) x Nky x Nkx array of Berry curvature (units m^2)
-    - Mu: n(=4) x Nky x Nkx array of magnetic moment (units Bohr magneton)
+    - Omega: n(=4) x Nkx x Nky array of Berry curvature (units m^2)
+    - Mu: n(=4) x Nkx x Nky array of magnetic moment (units Bohr magneton)
     '''
     hdkx, hdky = H_dkx(xi), H_dky()  # 4x4 matrices
 
-    Omega = np.zeros_like(E)  # 4 x Nky x Nkx
+    Omega = np.zeros_like(E)  # 4 x Nkx x Nky
     Mu = np.zeros_like(E)
 
     for n, (e_n, psi_n) in enumerate(zip(E, Psi)):

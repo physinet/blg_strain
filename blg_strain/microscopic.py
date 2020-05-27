@@ -13,24 +13,24 @@ def meff_func(kx, ky, E):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: N(=4) x Nky x Nkx array of energy eigenvalues
+    - E: N(=4) x Nkx x Nky array of energy eigenvalues
 
     Returns:
-    - meff: N(=4) x Nky x Nkx x 2 x 2 array.
+    - meff: N(=4) x Nkx x Nky x 2 x 2 array.
         The 1st dimension indexes the energy bands
         The 2nd/3rd dimensions index over ky and kx
         The 4th/5th dimensions are the 2x2 effective mass tensor
     '''
-    E_dky, E_dkx = np.gradient(E, ky, kx, axis=(1,2), edge_order=2) # axis1 = y
+    E_dkx, E_dky = np.gradient(E, kx, ky, axis=(1,2), edge_order=2) # axis1 = y
                                                                     # axis2 = x
 
-    E_dkx_dky, E_dkx_dkx = np.gradient(E_dkx, ky, kx, axis=(1,2), edge_order=2)
-    E_dky_dky, E_dky_dkx = np.gradient(E_dky, ky, kx, axis=(1,2), edge_order=2)
+    E_dkx_dkx, E_dkx_dky = np.gradient(E_dkx, kx, ky, axis=(1,2), edge_order=2)
+    E_dky_dkx, E_dky_dky = np.gradient(E_dky, kx, ky, axis=(1,2), edge_order=2)
 
     if E.shape[0] != 4:
         raise Exception('Something is wrong... size of E is not 4 x ...')
 
-    oneoverm = np.zeros((E.shape[0], len(ky), len(kx), 2, 2))
+    oneoverm = np.zeros((E.shape[0], len(kx), len(ky), 2, 2))
 
     oneoverm[:, :, :, 0, 0] = E_dkx_dkx / hbar**2
     oneoverm[:, :, :, 0, 1] = E_dky_dkx / hbar**2
@@ -62,7 +62,7 @@ def feq_func(E, EF, T=0):
 
 def check_f_boundaries(f, thresh=0.01):
     '''
-    Given an N(=4) x Nky x Nkx array of values for
+    Given an N(=4) x Nkx x Nky array of values for
     the Fermi-Dirac distribution, checks if the values are above a threshold
     along the boundaries of the k space spanned by kx and ky.
     Prints a warning if this condition is not met.
@@ -88,7 +88,7 @@ def grad_feq_func(kx, ky, E, EF, T=0):
 
     Arguments:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: Energy (eV) - an ... x Nky x Nkx array
+    - E: Energy (eV) - an ... x Nkx x Nky array
     - EF: Fermi energy (eV)
     - T: Temperature (K)
 
@@ -96,7 +96,7 @@ def grad_feq_func(kx, ky, E, EF, T=0):
     - f_dkx, f_dky - components of gradient of feq (each with same shape as E)
     '''
     f = feq_func(E, EF, T)
-    f_dky, f_dkx = np.gradient(f, ky, kx, axis=(-2,-1))
+    f_dkx, f_dky = np.gradient(f, kx, ky, axis=(-2,-1))
 
     return f_dkx, f_dky
 
@@ -107,7 +107,7 @@ def grad_feq_func_2(kx, ky, E, EF, T=0):
 
     Arguments:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: Energy (eV) - an ... x Nky x Nkx array
+    - E: Energy (eV) - an ... x Nkx x Nky array
     - EF: Fermi energy (eV)
     - T: Temperature (K)
 
@@ -116,7 +116,7 @@ def grad_feq_func_2(kx, ky, E, EF, T=0):
     '''
     if T < 1e-2:
         T = 1e-2 # small but finite to avoid dividing by zero
-    E_dky, E_dkx = np.gradient(E, ky, kx, axis=(-2, -1))
+    E_dkx, E_dky = np.gradient(E, kx, ky, axis=(-2, -1))
 
     sech2 = np.cosh((E - EF) / (2 * kB * T)) ** -2
 

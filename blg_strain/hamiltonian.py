@@ -9,14 +9,14 @@ def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     Calculates the 4x4 low-energy Hamiltonian for uniaxially strained BLG.
 
     Parameters:
-    - Kx, Ky: Nky x Nkx array of wave vectors (nm^-1)
+    - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
     - xi: valley index (+1 for K, -1 for K')
     - Delta: interlayer asymmetry (eV)
     - delta: uniaxial strain
     - theta: angle of uniaxial strain to zigzag axis
 
     Returns:
-    - H: Hamiltonian array shape 4 x 4 x Nky x Nkx
+    - H: Hamiltonian array shape 4 x 4 x Nkx x Nky
     '''
 
     # Array to give proper shape to constants

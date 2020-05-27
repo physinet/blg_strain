@@ -17,4 +17,5 @@ def w(delta, idx=3, xi=1, theta=0):
     elif idx == 4:
         gamma = gamma4
         eta = eta4
-    return 3 / 4 * np.exp(-1j*2*xi*theta)*(1+nu)*delta*(eta - eta0)*gamma
+    return 3 / 4 * np.exp(-1j * 2 * xi * theta) * (1 + nu) \
+                 * delta * (eta - eta0) * gamma

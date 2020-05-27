@@ -30,11 +30,11 @@ def n_valley_layer(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
         weight = abs(Psi[:, 1, :, :]) ** 2 + abs(Psi[:, 2, :, :]) ** 2
 
     integrand = (2 * 2 / (2 * np.pi) ** 2) * feq * weight
-    # The integrand is an N(=4) x Nky x Nkx array
-    # the inner simps integrates over kx (the last dimension of integrand)
-    # the result of the inner integration is N(=4) x Nky
-    # the outer simps then integrates over ky to give a length N(=4) array
-    integral = simps(simps(integrand, kx, axis=-1), ky, axis=-1)
+    # The integrand is an N(=4) x Nkx x Nky array
+    # the inner simps integrates over ky (the last dimension of integrand)
+    # the result of the inner integration is N(=4) x Nkx
+    # the outer simps then integrates over kx to give a length N(=4) array
+    integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
 
     # We now sum over the bands
     return integral.sum()
@@ -47,8 +47,8 @@ def n_layer(kx, ky, E1, E2, Psi1, Psi2, EF, T=0, layer=1):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E1, E2: N(=4) x Nky x Nkx arrays of energy eigenvalues for valley K and K'
-    - Psi1, Psi2: N(=4) x N(=4) x Nky x Nkx arrays of eigenstates for K and K'
+    - E1, E2: N(=4) x Nkx x Nky arrays of energy eigenvalues for valley K and K'
+    - Psi1, Psi2: N(=4) x N(=4) x Nkx x Nky arrays of eigenstates for K and K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     - layer: layer number (1 or 2)
@@ -69,7 +69,7 @@ def n_valley(kx, ky, E, EF, T=0):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: N(=4) x Nky x Nkx array of energy eigenvalues for valley K or K'
+    - E: N(=4) x Nkx x Nky array of energy eigenvalues for valley K or K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
@@ -80,7 +80,7 @@ def n_valley(kx, ky, E, EF, T=0):
     integrand = 2 * 2 / (2 * np.pi) ** 2 * feq
 
     # integrate and sum over bands
-    return simps(simps(integrand, kx, axis=-1), ky, axis=-1).sum()
+    return simps(simps(integrand, ky, axis=-1), kx, axis=-1).sum()
 
 
 def ntot_func(kx, ky, E1, E2, EF, T=0):
@@ -90,7 +90,7 @@ def ntot_func(kx, ky, E1, E2, EF, T=0):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E1, E2: N(=4) x Nky x Nkx arrays of energy eigenvalues for valley K and K'
+    - E1, E2: N(=4) x Nkx x Nky arrays of energy eigenvalues for valley K and K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
@@ -103,11 +103,11 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: N(=4) x Nky x Nkx array of energy eigenvalues
-    - Omega: N(=4) x Nky x Nkx array of berry curvature
-    - Mu: N(=4) x Nky x Nkx array of magnetic moment (in Bohr magnetons)
+    - E: N(=4) x Nkx x Nky array of energy eigenvalues
+    - Omega: N(=4) x Nkx x Nky array of berry curvature
+    - Mu: N(=4) x Nkx x Nky array of magnetic moment (in Bohr magnetons)
     - Efield: length-2 array of electric field x/y components (V/m)
-    - tau: scattering time (s). In general an Nky x Nkx array.
+    - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
@@ -115,9 +115,9 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
 
     feq = feq_func(E, EF, T)
 
-    E_dky, E_dkx = np.gradient(E, ky, kx, axis=(-2,-1))
-    Omega_dky, Omega_dkx = np.gradient(Omega, ky, kx, axis=(-2,-1))
-    Mu_dky, Mu_dkx = np.gradient(Mu, ky, kx, axis=(-2,-1))
+    E_dkx, E_dky = np.gradient(E, kx, ky, axis=(-2,-1))
+    Omega_dkx, Omega_dky = np.gradient(Omega, kx, ky, axis=(-2,-1))
+    Mu_dkx, Mu_dky = np.gradient(Mu, kx, ky, axis=(-2,-1))
 
     integrandx = - q * tau * Ex / hbar / (2 * np.pi) ** 2 * feq * \
                  (Mu_dkx * muB + q * Omega_dkx / hbar * (EF-E) \
@@ -126,7 +126,7 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
                  (Mu_dky * muB + q * Omega_dky / hbar * (EF-E) \
                                - q * Omega / hbar * E_dky)
 
-    integral = simps(simps(integrandx + integrandy, kx, axis=-1), ky, axis=-1)
+    integral = simps(simps(integrandx + integrandy, ky, axis=-1), kx, axis=-1)
 
     return integral.sum(axis=0) # sum over bands
 
@@ -139,16 +139,16 @@ def D_valley(kx, ky, E, Omega, EF=0, T=0):
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
     Params:
-    - E: N(=4) x Nky x Nkx array of energy eigenvalues for valley K or K'
-    - Omega: N(=4) x Nky x Nkx array of berry curvature
+    - E: N(=4) x Nkx x Nky array of energy eigenvalues for valley K or K'
+    - Omega: N(=4) x Nkx x Nky array of berry curvature
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
     feq = feq_func(E, EF, T)
 
-    Omega_dky, Omega_dkx = np.gradient(Omega, ky, kx, axis=(-2,-1))
+    Omega_dkx, Omega_dky = np.gradient(Omega, kx, ky, axis=(-2,-1))
 
-    integral = simps(simps(feq * Omega_dkx, kx, axis=-1), ky, axis=-1)
+    integral = simps(simps(feq * Omega_dkx, ky, axis=-1), kx, axis=-1)
 
     return integral # not summed over bands
 
@@ -160,8 +160,8 @@ def D_func(kx, ky, E1, E2, Omega1, Omega2, EF=0, T=0):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E1, E2: N(=4) x Nky x Nkx arrays of energy eigenvalues for valley K and K'
-    - Omega1, Omega2: N(=4) x Nky x Nkx arrays of Berry curvature for K and K'
+    - E1, E2: N(=4) x Nkx x Nky arrays of energy eigenvalues for valley K and K'
+    - Omega1, Omega2: N(=4) x Nkx x Nky arrays of Berry curvature for K and K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
