@@ -10,9 +10,10 @@ from .utils.params import w
 def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     '''
     Calculates the 4x4 low-energy Hamiltonian for uniaxially strained BLG.
+    Scalar inputs for Kx, Ky not supported (due to complications from numba)
 
     Parameters:
-    - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
+    - Kx, Ky: Nkx x Nky arrays of wave vectors (nm^-1)
     - xi: valley index (+1 for K, -1 for K')
     - Delta: interlayer asymmetry (eV)
     - delta: uniaxial strain
@@ -50,6 +51,8 @@ def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
 
     return H
 
+
+@jit
 def H_dkx(xi=1):
     '''
     Returns the 4x4 derivative (w.r.t. kx) of the Hamiltonian
@@ -63,8 +66,10 @@ def H_dkx(xi=1):
         [v3, 0, v0, -v4],
         [-v4, v0, 0, 0],
         [v0, -v4, 0, 0]
-    ])
+    ], dtype=np.complex128)   # dtype for jitted np.dot
 
+
+@jit
 def H_dky(xi=1):
     '''
     Returns the 4x4 derivative (w.r.t. ky) of the Hamiltonian
@@ -78,4 +83,4 @@ def H_dky(xi=1):
         [-v3, 0, v0, -v4],
         [-v4, -v0, 0, 0],
         [v0, v4, 0, 0]
-    ])
+    ], dtype=np.complex128)   # dtype for jitted np.dot
