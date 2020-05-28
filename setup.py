@@ -11,6 +11,7 @@ setup(name='blg_strain',
     install_requires=[
         'matplotlib',
         'numpy',
-        'scipy'
+        'scipy',
+        'numba'
     ],
     zip_safe=False)

@@ -1,9 +1,12 @@
 import numpy as np
+from numba import jit
+
 from .utils.const import nu, eta0, eta3, eta4, \
                          gamma0, gamma1, gamma3, gamma4, \
                          dab, v0, v3, v4, hbar
 from .utils.params import w
 
+@jit(parallel=True)
 def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     '''
     Calculates the 4x4 low-energy Hamiltonian for uniaxially strained BLG.
@@ -37,12 +40,13 @@ def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     pi = xi * px + 1j * py
     pidag = xi * px - 1j * py
 
-    H = np.array([
-        [-1/2 * Deltao, v3 * pi + w3, -v4 * pidag - w4s, v0*pidag],
-        [v3 * pidag + w3s,  1/2 * Deltao, v0 * pi, -v4 * pi - w4],
-        [-v4 * pi - w4, v0 * pidag, 1/2 * Deltao + dabo, gamma1o],
-        [v0 * pi, -v4 * pidag - w4s, gamma1o, -1/2 * Deltao + dabo]
-    ])
+    # return H
+    H = np.stack((
+        np.stack((-1/2 * Deltao, v3 * pi + w3, -v4 * pidag - w4s, v0*pidag)),
+        np.stack((v3 * pidag + w3s,  1/2 * Deltao, v0 * pi, -v4 * pi - w4)),
+        np.stack((-v4 * pi - w4, v0 * pidag, 1/2 * Deltao + dabo, gamma1o)),
+        np.stack((v0 * pi, -v4 * pidag - w4s, gamma1o, -1/2 * Deltao + dabo))
+    ))
 
     return H
 

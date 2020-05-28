@@ -1,7 +1,9 @@
 import numpy as np
+from numba import jit
 
 from .const import eta0, eta3, eta4, gamma3, gamma4, nu
 
+@jit(parallel=True)
 def w(delta, idx=3, xi=1, theta=0):
     '''
     Calculate gauge fields w3/w4 from strain.
