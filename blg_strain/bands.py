@@ -1,4 +1,5 @@
 import numpy as np
+from numba import jit
 
 from .berry import berry_mu
 from .hamiltonian import Hfunc
@@ -31,12 +32,14 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
 
     Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
 
-    E, Psi, Omega, Mu = _get_bands(Kx, Ky, xi=xi, Delta=Delta, delta=delta,
-                        theta=theta)
+    E, Psi, Omega, Mu = _get_bands(kx, ky, xi=xi, Delta=Delta, delta=delta,
+                            theta=theta)
 
     return kx, ky, Kx, Ky, E, Psi, Omega, Mu
 
-def _get_bands(Kx, Ky, xi=1, **params):
+
+@jit(parallel=True)
+def _get_bands(kx, ky, xi=1, Delta=0, delta=0, theta=0):
     '''
     Calculate energy eigenvalues, eigenvectors, berry curvature, and magnetic
     moment for a rectangular window of k-space.
@@ -44,45 +47,45 @@ def _get_bands(Kx, Ky, xi=1, **params):
     Parameters:
     - Kx, Ky: Nkx x Nky meshgrid of kx, ky points (using 'ij' indexing)
     - xi: valley index (+1 for K, -1 for K')
-    - params: passed to `hamiltonian.H_func`
+    - Delta: interlayer asymmetry (eV)
+    - delta: uniaxial strain
+    - theta: angle of uniaxial strain to zigzag axis
 
     Returns:
     - E: N(=4) x Nkx x Nky array of energy eigenvalues
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenvectors
-    - Omega: N(=4) x Nkx x Nky array of berry curvature
-    - Mu: N(=4) x Nkx x Nky array of magnetic moment
+    - Omega: N(=4) x Nky x Nkx array of berry curvature
+    - Mu: N(=4) x Nky x Nkx array of magnetic moment
     '''
 
-    H = Hfunc(Kx, Ky, xi=xi, **params)
+    E = np.zeros((4, len(kx), len(ky)))
+    Psi = np.zeros((4, 4, len(kx), len(ky)), dtype=np.complex128)
+    Omega = np.zeros((4, len(kx), len(ky)))
+    Mu = np.zeros((4, len(kx), len(ky)))
 
-    H = H.swapaxes(0, 2).swapaxes(1,3) # put the 4x4 in the last 2 dims for eigh
-    E, Psi = np.linalg.eigh(H)  # using eigh for Hermitian
-                                # eigenvalues are real and sorted (low to high)
-    # Shapes - E: Nkx x Nky x 4, Psi: Nkx x Nky x 4 x 4
-    E = E.swapaxes(0,1).swapaxes(0,2) # put the kx,ky points in last 2 dims
-    Psi = Psi.swapaxes(0, 2).swapaxes(1,3) # put the kx,ky points in last 2 dims
-    # now E[:, 0, 0] is a length-4 array of eigenvalues
-    # and Psi[:, :, 0, 0] is a 4x4 array of eigenvectors (in the columns)
+    for i in range(len(kx)):
+        for j in range(len(ky)):
+            # Make x and y 2-dimensional for compatibility with Hfunc
+            x = kx[i:i+1].reshape(1,1)  # the i:i+1 is necessary for jit to work
+            y = ky[j:j+1].reshape(1,1)
 
-    # Address sign ambiguity
-    # Force the first component of each eigenvector to be positive
-    # Create a multiplier: 1 if the first component is positive
-    #                     -1 if the first component is negative
-    multiplier = 2 * (Psi[0, :, :, :].real > 0) - 1  # shape 4 x Nkx x Nky
-    Psi *= multiplier  # flips sign of eigenvectors where 1st component is -ive
-                       # NOTE: broadcasting rules dictate that the multiplier is
-                       # applied to all components of the first dimension, thus
-                       # flipping the sign of the entire vector
+            h = Hfunc(x, y, xi=xi, Delta=Delta, delta=delta,
+                theta=theta)[:, :, 0, 0]
+                  # Hfunc returns shape (4, 4, 1, 1)
 
-    if (Psi[0, :, :, :].real < 0).any():  # double check that all positive
-        raise Exception('Fixing sign ambiguity failed! There are eigenvectors \
-                with a negative first component!')
+            eigs, vecs = np.linalg.eigh(h) # Use eigh for Hermitian
+             # guaranteed sorted real eigenvalues
+            vecs = vecs.T # eigenvectors are in the columns
+                          # -> transpose to put in rows
 
-    # Finally, transpose first 2 dimensions to put the eigenvectors in the rows
-    Psi = Psi.transpose((1,0,2,3))
+            # Fix sign ambiguity
+            for k in range(len(vecs)):
+                if vecs[k][0].real < 0: # check sign of first component
+                    vecs[k] *= -1 # guarantee first component is positive
 
-    # Now E[n, 0, 0] and Psi[n, :, 0, 0] give the energy and eigenstates
+            E[:, i, j] = eigs # Energy for the two bands
+            Psi[:, :, i, j] = vecs # eigenstates
 
-    Omega, Mu = berry_mu(E, Psi, xi=xi)
+            Omega[:, i, j], Mu[:, i, j] = berry_mu(eigs, vecs, xi=xi)
 
     return E, Psi, Omega, Mu
