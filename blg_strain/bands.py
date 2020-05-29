@@ -55,12 +55,12 @@ def _get_bands(Kx, Ky, xi=1, **params):
 
     H = Hfunc(Kx, Ky, xi=xi, **params)
 
-    H = H.swapaxes(0, 2).swapaxes(1,3) # put the 4x4 in the last 2 dims for eigh
+    H = H.transpose(2,3,0,1) # put the 4x4 in the last 2 dims for eigh
     E, Psi = np.linalg.eigh(H)  # using eigh for Hermitian
                                 # eigenvalues are real and sorted (low to high)
     # Shapes - E: Nkx x Nky x 4, Psi: Nkx x Nky x 4 x 4
-    E = E.swapaxes(0,1).swapaxes(0,2) # put the kx,ky points in last 2 dims
-    Psi = Psi.swapaxes(0, 2).swapaxes(1,3) # put the kx,ky points in last 2 dims
+    E = E.transpose(2,0,1) # put the kx,ky points in last 2 dims
+    Psi = Psi.transpose(2,3,0,1) # put the kx,ky points in last 2 dims
     # now E[:, 0, 0] is a length-4 array of eigenvalues
     # and Psi[:, :, 0, 0] is a 4x4 array of eigenvectors (in the columns)
 
