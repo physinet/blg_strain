@@ -133,31 +133,36 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
     return integral.sum(axis=0) # sum over bands
 
 
-def D_valley(kx, ky, E, Omega, EF=0, T=0):
+def D_valley(kx, ky, E, Omega, EF=0, T=0, Nkx=1000, Nky=1000):
     '''
     Integrates over k space to get Berry curvature dipole for one valley.
     Integral is not summed over bands!
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    Params:
     - E: N(=4) x Nkx x Nky array of energy eigenvalues for valley K or K'
     - Omega: N(=4) x Nkx x Nky array of berry curvature
     - EF: Fermi energy (eV)
     - T: temperature (K)
+    - Nkx, Nky: number of points to use for dense interpolation
     '''
-    feq = feq_func(E, EF, T)
-
     N = E.shape[0]  # 4
     D = np.empty(N)
 
-    for n in range(N):
-        spl = RectBivariateSpline(kx, ky, Omega[n])
-        Omega_dkx = spl(kx, ky, dx=1)
-        spl2 = RectBivariateSpline(kx, ky, Omega_dkx * feq[n])  # integrand
-        D[n] = spl2.integral(kx.min(), kx.max(), ky.min(), ky.max())
+    kxdense = np.linspace(kx.min(), kx.max(), Nkx)
+    kydense = np.linspace(ky.min(), ky.max(), Nky)
+    # Kxdense, Kydense = np.meshgrid(kxdense, kydense, indexing='ij')
 
-    return D  # not summed over bands
+    for n in range(N):
+        spl_E = RectBivariateSpline(kx, ky, E[n])
+        f = feq_func(spl_E(kxdense, kydense), EF, T)
+
+        spl = RectBivariateSpline(kx, ky, Omega[n])
+        Omega_dkx = spl(kxdense, kydense, dx=1)
+        D[n] = simps(simps(Omega_dkx * f, kydense), kxdense)
+            # integral over y (axis -1) then x (axis -1 of the result of simps)
+
+    return D  # not yet summed over bands
 
 
 def D_func(kx, ky, E1, E2, Omega1, Omega2, EF=0, T=0):
