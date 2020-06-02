@@ -31,10 +31,10 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
 
     Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
 
-    E, Psi, Omega, Mu = _get_bands(Kx, Ky, xi=xi, Delta=Delta, delta=delta,
+    E, Psi = _get_bands(Kx, Ky, xi=xi, Delta=Delta, delta=delta,
                         theta=theta)
 
-    return kx, ky, Kx, Ky, E, Psi, Omega, Mu
+    return kx, ky, Kx, Ky, E, Psi
 
 def _get_bands(Kx, Ky, xi=1, **params):
     '''
@@ -83,6 +83,4 @@ def _get_bands(Kx, Ky, xi=1, **params):
 
     # Now E[n, 0, 0] and Psi[n, :, 0, 0] give the energy and eigenstates
 
-    Omega, Mu = berry_mu(E, Psi, xi=xi)
-
-    return E, Psi, Omega, Mu
+    return E, Psi
