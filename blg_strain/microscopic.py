@@ -52,9 +52,8 @@ def feq_func(E, EF, T=0):
     - T: Temperature (K)
     '''
 
-    if T < 1e-10:
-        T = 1e-10 # small but finite to avoid dividing by zero
-    f = 1 / (1 + np.exp((E - EF) / (kB * T)))
+    with np.errstate(divide='ignore'):  # ignore division by zero
+        f = 1 / (1 + np.exp((E - EF) / (kB * T)))
     f[E < 0] = -(1 - f[E < 0])  # hole occupation is 1-f, and we give it a (-)
                               # so they contribute as (-) to carrier density
 
