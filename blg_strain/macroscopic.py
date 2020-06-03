@@ -152,7 +152,7 @@ def D_valley(kx, ky, f, splO):
     return D  # not yet summed over bands
 
 
-def D_func(kx, ky, f1, f2, splO1, splO2, EF=0, T=0):
+def D_func(kx, ky, f1, f2, splO1, splO2):
     '''
     Integrates over k space to get Berry curvature dipole. This is the sum of
     contributions from both valleys. Integral is not summed over bands!
