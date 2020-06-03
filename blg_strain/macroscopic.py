@@ -2,10 +2,10 @@ import numpy as np
 from scipy.integrate import simps
 from scipy.interpolate import RectBivariateSpline
 
-from .microscopic import feq_func, check_f_boundaries
+from .microscopic import check_f_boundaries
 from .utils.const import q, hbar, muB
 
-def n_valley_layer(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
+def n_valley_layer(kx, ky, feq, Psi, EF, T=0, xi=1, layer=1):
     '''
     Calculate the contribution to the carrier density on layer 1/2 from valley
     K or K' indexed by xi (K: 1, K': -1). This is an integral over the Brillouin
@@ -17,12 +17,11 @@ def n_valley_layer(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
     two components. For the K' valley (xi=-1), this is reversed.
     '''
     assert xi in [1, -1]
-    assert layer in [1,2]
+    assert layer in [1, 2]
 
-    feq = feq_func(E, EF, T)
-    # This should be zero at the edges of the window defined by kx, ky. So the
-    # integration over the entire Brillouin zone should be captured by
-    # integrating over this range of k's. Let's check that f is (nearly) zero
+    # The occupation should be zero at the edges of the window defined by kx,
+    # ky. So the integration over the entire Brillouin zone should be captured
+    # by integrating over this range of k's. Let's check that f is (nearly) zero
     # at the boundaries (this will print a message if not):
     check_f_boundaries(feq)
 
@@ -42,14 +41,14 @@ def n_valley_layer(kx, ky, E, Psi, EF, T=0, xi=1, layer=1):
     return integral.sum()
 
 
-def n_layer(kx, ky, E1, E2, Psi1, Psi2, EF, T=0, layer=1):
+def n_layer(kx, ky, feq1, feq2, Psi1, Psi2, EF, T=0, layer=1):
     '''
     Calculate the contribution to the carrier density on layer 1/2 considering
     both valleys.
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E1, E2: N(=4) x Nkx x Nky arrays of energy eigenvalues for valley K and K'
+    - feq1, feq2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
     - Psi1, Psi2: N(=4) x N(=4) x Nkx x Nky arrays of eigenstates for K and K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
@@ -57,13 +56,13 @@ def n_layer(kx, ky, E1, E2, Psi1, Psi2, EF, T=0, layer=1):
     '''
     assert layer in [1, 2]
 
-    n = n_valley_layer(kx, ky, E1, Psi1, EF, T=T, layer=layer) \
-      + n_valley_layer(kx, ky, E2, Psi2, EF, T=T, layer=layer)
+    n = n_valley_layer(kx, ky, feq1, Psi1, EF, T=T, layer=layer) \
+      + n_valley_layer(kx, ky, feq2, Psi2, EF, T=T, layer=layer)
 
     return n
 
 
-def n_valley(kx, ky, E, EF, T=0):
+def n_valley(kx, ky, feq, EF, T=0):
     '''
     Integrates the Fermi-Dirac distribution to calculate the total carrier
     density (in m^-2). This is the contribution from only one of the two valleys
@@ -71,12 +70,11 @@ def n_valley(kx, ky, E, EF, T=0):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: N(=4) x Nkx x Nky array of energy eigenvalues for valley K or K'
+    - feq: N(=4) x Nkx x Nky array of occupation for valley K or K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
 
-    feq = feq_func(E, EF, T)
     check_f_boundaries(feq)  # check if f is nearly zero at boundaries of region
 
     integrand = 2 * 2 / (2 * np.pi) ** 2 * feq
@@ -85,18 +83,18 @@ def n_valley(kx, ky, E, EF, T=0):
     return simps(simps(integrand, ky, axis=-1), kx, axis=-1).sum()
 
 
-def ntot_func(kx, ky, E1, E2, EF, T=0):
+def ntot_func(kx, ky, feq1, feq2, EF, T=0):
     '''
     Integrates the Fermi-Dirac distribution to calculate the total carrier
     density (in m^-2). This is the sum of contributions from both valleys.
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E1, E2: N(=4) x Nkx x Nky arrays of energy eigenvalues for valley K and K'
+    - feq1, feq2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
-    return n_valley(kx, ky, E1, EF, T=T) + n_valley(kx, ky, E2, EF, T=T)
+    return n_valley(kx, ky, feq1, EF, T=T) + n_valley(kx, ky, feq2, EF, T=T)
 
 
 def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
@@ -133,49 +131,41 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
     return integral.sum(axis=0) # sum over bands
 
 
-def D_valley(kx, ky, E, Omega, EF=0, T=0, Nkx=1000, Nky=1000):
+def D_valley(kx, ky, splE, splO, EF=0, T=0):
     '''
     Integrates over k space to get Berry curvature dipole for one valley.
     Integral is not summed over bands!
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: N(=4) x Nkx x Nky array of energy eigenvalues for valley K or K'
-    - Omega: N(=4) x Nkx x Nky array of berry curvature
+    - splE: N(=4) array of splines for energy eigenvalues for valley K or K'
+    - splO: N(=4) array of splines for berry curvature in each band
     - EF: Fermi energy (eV)
     - T: temperature (K)
-    - Nkx, Nky: number of points to use for dense interpolation
     '''
-    N = E.shape[0]  # 4
+    N = splE.shape[0]  # 4
     D = np.empty(N)
 
-    kxdense = np.linspace(kx.min(), kx.max(), Nkx)
-    kydense = np.linspace(ky.min(), ky.max(), Nky)
-    # Kxdense, Kydense = np.meshgrid(kxdense, kydense, indexing='ij')
-
     for n in range(N):
-        spl_E = RectBivariateSpline(kx, ky, E[n])
-        f = feq_func(spl_E(kxdense, kydense), EF, T)
-
-        spl = RectBivariateSpline(kx, ky, Omega[n])
-        Omega_dkx = spl(kxdense, kydense, dx=1)
-        D[n] = simps(simps(Omega_dkx * f, kydense), kxdense)
+        f = feq_func(splE[n](kx, ky), EF, T)
+        Omega_dkx = splO[n](kx, ky, dx=1)
+        D[n] = simps(simps(Omega_dkx * f, ky), kx)
             # integral over y (axis -1) then x (axis -1 of the result of simps)
 
     return D  # not yet summed over bands
 
 
-def D_func(kx, ky, E1, E2, Omega1, Omega2, EF=0, T=0):
+def D_func(kx, ky, splE1, splE2, splO1, splO2, EF=0, T=0):
     '''
     Integrates over k space to get Berry curvature dipole. This is the sum of
     contributions from both valleys. Integral is not summed over bands!
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E1, E2: N(=4) x Nkx x Nky arrays of energy eigenvalues for valley K and K'
-    - Omega1, Omega2: N(=4) x Nkx x Nky arrays of Berry curvature for K and K'
+    - splE1, splE2: N(=4) arrays of splines for energy for valley K and K'
+    - splO1, splO2: N(=4) array of splines for berry curvature in K and K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
-    return D_valley(kx, ky, E1, Omega1, EF, T=T) \
-         + D_valley(kx, ky, E2, Omega2, EF, T=T)
+    return D_valley(kx, ky, splE1, splO1, EF, T=T) \
+         + D_valley(kx, ky, splE2, splO2, EF, T=T)
