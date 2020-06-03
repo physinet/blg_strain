@@ -131,41 +131,36 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
     return integral.sum(axis=0) # sum over bands
 
 
-def D_valley(kx, ky, splE, splO, EF=0, T=0):
+def D_valley(kx, ky, f, splO):
     '''
     Integrates over k space to get Berry curvature dipole for one valley.
     Integral is not summed over bands!
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - splE: N(=4) array of splines for energy eigenvalues for valley K or K'
+    - f: N(=4) x Nkx x Nky array of occupation for valley K or K'
     - splO: N(=4) array of splines for berry curvature in each band
-    - EF: Fermi energy (eV)
-    - T: temperature (K)
     '''
-    N = splE.shape[0]  # 4
+    N = f.shape[0]  # 4
     D = np.empty(N)
 
     for n in range(N):
-        f = feq_func(splE[n](kx, ky), EF, T)
         Omega_dkx = splO[n](kx, ky, dx=1)
-        D[n] = simps(simps(Omega_dkx * f, ky), kx)
+        D[n] = simps(simps(Omega_dkx * f[n], ky), kx)
             # integral over y (axis -1) then x (axis -1 of the result of simps)
 
     return D  # not yet summed over bands
 
 
-def D_func(kx, ky, splE1, splE2, splO1, splO2, EF=0, T=0):
+def D_func(kx, ky, f1, f2, splO1, splO2, EF=0, T=0):
     '''
     Integrates over k space to get Berry curvature dipole. This is the sum of
     contributions from both valleys. Integral is not summed over bands!
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - splE1, splE2: N(=4) arrays of splines for energy for valley K and K'
+    - f1, f2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
     - splO1, splO2: N(=4) array of splines for berry curvature in K and K'
-    - EF: Fermi energy (eV)
-    - T: temperature (K)
     '''
-    return D_valley(kx, ky, splE1, splO1, EF, T=T) \
-         + D_valley(kx, ky, splE2, splO2, EF, T=T)
+    return D_valley(kx, ky, f1, splO1) \
+         + D_valley(kx, ky, f2, splO2)
