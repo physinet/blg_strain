@@ -4,7 +4,7 @@ from .berry import berry_mu
 from .hamiltonian import Hfunc
 
 def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
-                Nky=200, xi=1, Delta=0, delta=0, theta=0):
+                Nky=200, xi=1, Delta=0, delta=0, theta=0, twobytwo=False):
     '''
     Calculate energy eigenvalues, eigenvectors, berry curvature, and magnetic
     moment for a rectangular window of k-space.
@@ -16,6 +16,7 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
     - Delta: interlayer asymmetry (eV)
     - delta: uniaxial strain
     - theta: angle of uniaxial strain to zigzag axis
+    - twobytwo: if True, use 2x2 Hamiltonian (N=2 for all returned values)
 
     Returns:
     - kx, ky: Nkx, Nky arrays of kx, ky points
@@ -23,8 +24,6 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
         compatible with scipy spline interpolation methods)
     - E: N(=4) x Nkx x Nky array of energy eigenvalues
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenvectors
-    - Omega: N(=4) x Nkx x Nky array of berry curvature
-    - Mu: N(=4) x Nkx x Nky array of magnetic moment
     '''
     kx = np.linspace(kxlims[0], kxlims[1], Nkx)
     ky = np.linspace(kylims[0], kylims[1], Nky)
@@ -32,7 +31,7 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
     Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
 
     E, Psi = _get_bands(Kx, Ky, xi=xi, Delta=Delta, delta=delta,
-                        theta=theta)
+                        theta=theta, twobytwo=twobytwo)
 
     return kx, ky, Kx, Ky, E, Psi
 
@@ -49,8 +48,6 @@ def _get_bands(Kx, Ky, xi=1, **params):
     Returns:
     - E: N(=4) x Nkx x Nky array of energy eigenvalues
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenvectors
-    - Omega: N(=4) x Nkx x Nky array of berry curvature
-    - Mu: N(=4) x Nkx x Nky array of magnetic moment
     '''
 
     H = Hfunc(Kx, Ky, xi=xi, **params)
