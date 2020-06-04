@@ -154,7 +154,7 @@ def H2_dkx(Kx, Ky, xi=1):
     '''
     m = gamma1 / (2 * v0**2)
 
-    ax = (-hbar / (2 * m) * Kx + xi * v3 * hbar)
+    ax = (-hbar ** 2 / (2 * m) * Kx + xi * v3 * hbar)
     ay = - hbar ** 2 / m * Ky
     az = 0 * Kx
 
@@ -172,7 +172,7 @@ def H2_dky(Kx, Ky, xi=1):
     '''
     m = gamma1 / (2 * v0**2)
 
-    ax = hbar / (2 * m) * Ky
+    ax = hbar ** 2 / (2 * m) * Ky
     ay = - (hbar ** 2 / m * Kx + xi * v3 * hbar)
     az = 0 * Kx
 
