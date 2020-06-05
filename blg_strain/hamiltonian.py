@@ -1,7 +1,7 @@
 import numpy as np
 from .utils.const import nu, eta0, eta3, eta4, \
                          gamma0, gamma1, gamma3, gamma4, \
-                         dab, v0, v3, v4, hbar
+                         dab, v0, v3, v4, hbar, meff
 from .utils.params import w
 
 def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0, twobytwo=False):
@@ -100,11 +100,6 @@ def H_dky(xi=1):
     ])
 
 
-sigmax = np.array([[0, 1], [1, 0]])
-sigmay = np.array([[0, -1j], [1j, 0]])
-sigmaz = np.array([[1, 0], [0, -1]])
-
-
 def H_2by2(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     '''
     Calculates the 2x2 low-energy Hamiltonian for uniaxially strained BLG.
@@ -122,23 +117,20 @@ def H_2by2(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     # Array to give proper shape to constants
     o = np.ones_like(Kx)
     Deltao = Delta * o
-    dabo = dab * o
-    gamma1o = gamma1 * o
 
     # Gauge fields
     w3 = w(delta, idx=3, xi=xi, theta=0) * o
-    w4 = w(delta, idx=4, xi=xi, theta=0) * o
-
     w3s = w3.conjugate()
-    w4s = w4.conjugate()
 
-    m = gamma1o / (2 * v0**2)
+    # Momentum
+    px, py = hbar * Kx, hbar * Ky
+    pi = xi * px + 1j * py
+    pidag = xi * px - 1j * py
 
-    ax = (-hbar**2 / (2 * m) * (Kx**2 - Ky**2) + xi * v3 * hbar*Kx + w3)
-    ay =  - (hbar**2 / m * Kx * Ky + xi * v3 * hbar * Ky)
-    az = Deltao / 2
-
-    H = np.array([[az, ax - 1j * ay], [ax + 1j * ay, -az]])
+    H = np.array([
+        [-Deltao / 2, -pidag ** 2 / (2 * meff) + xi * v3 * pi + w3],
+        [-pi **2 / (2 * meff) + xi * v3 * pidag + w3s,   Deltao / 2]
+    ])
 
     return H
 
@@ -152,13 +144,17 @@ def H2_dkx(Kx, Ky, xi=1):
     - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
     - xi: valley index
     '''
-    m = gamma1 / (2 * v0**2)
+    # Momentum
+    px, py = hbar * Kx, hbar * Ky
+    pi = xi * px + 1j * py
+    pidag = xi * px - 1j * py
 
-    ax = (-hbar ** 2 / (2 * m) * Kx + xi * v3 * hbar)
-    ay = - hbar ** 2 / m * Ky
-    az = 0 * Kx
-
-    return np.array([[az, ax - 1j * ay], [ax + 1j * ay, -az]])
+    # dH/dkx = (dH/dpi)*(dpi/dkx) + (dHdpidag)*(dpidag/dkx)
+    #        = (dH/dpi)*hbar + (dH/dpidag)*hbar
+    return np.array([
+        [0 * Kx, -pidag / meff + xi * v3],
+        [-pi / meff + xi * v3,  0 * Kx]
+    ]) * hbar
 
 
 def H2_dky(Kx, Ky, xi=1):
@@ -170,10 +166,14 @@ def H2_dky(Kx, Ky, xi=1):
     - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
     - xi: valley index
     '''
-    m = gamma1 / (2 * v0**2)
+    # Momentum
+    px, py = hbar * Kx, hbar * Ky
+    pi = xi * px + 1j * py
+    pidag = xi * px - 1j * py
 
-    ax = hbar ** 2 / (2 * m) * Ky
-    ay = - (hbar ** 2 / m * Kx + xi * v3 * hbar)
-    az = 0 * Kx
-
-    return  np.array([[az, ax - 1j * ay], [ax + 1j * ay, -az]])
+    # dH/dky = (dH/dpi)*(dpi/dky) + (dHdpidag)*(dpidag/dky)
+    #        = (dH/dpi)*i*hbar + (dH/dpidag)*(-i)*hbar
+    return np.array([
+        [0 * Kx, pidag / meff + xi * v3],
+        [-pi / meff - xi * v3,  0 * Kx]
+    ]) * 1j * hbar
