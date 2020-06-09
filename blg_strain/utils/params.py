@@ -19,3 +19,12 @@ def w(delta, idx=3, xi=1, theta=0):
         eta = eta4
     return 3 / 4 * np.exp(-1j * 2 * xi * theta) * (1 + nu) \
                  * delta * (eta - eta0) * gamma
+
+
+def w_to_delta(w3):
+    '''
+    Convert the gauge field w3 (in units of eV) to the corresponding strain value
+    delta for strain applied at theta=0
+    '''
+    w0 = w(1).real  # value of w3 for 100% strain
+    return w3 / w(1).real

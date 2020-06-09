@@ -5,18 +5,23 @@ from scipy.interpolate import RectBivariateSpline
 from .microscopic import check_f_boundaries
 from .utils.const import q, hbar, muB
 
-def n_valley_layer(kx, ky, feq, Psi, EF, T=0, xi=1, layer=1):
+def n_valley_layer(kx, ky, feq, Psi, layer=1):
     '''
-    Calculate the contribution to the carrier density on layer 1/2 from valley
-    K or K' indexed by xi (K: 1, K': -1). This is an integral over the Brillouin
+    Calculate the contribution to the carrier density on layer 1/2 using the
+    band structure for a single valley. This is an integral over the Brillouin
     zone of the occupation function weighted by the wavefunction amplitudes on
     each layer.
 
-    In the K valley (xi=1), layer 1 corresponds to the first and last components
-    of the (4-component) eigenvectors, while layer 2 corresponds to the middle
-    two components. For the K' valley (xi=-1), this is reversed.
+    Layer 1 corresponds to the first and last components of the (4-component)
+    eigenvectors, while layer 2 corresponds to the middle two components.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - feq: N(=4) x Nkx x Nky array of occupation for a given valley
+    - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenstates for a given valley
+    - layer: layer number (1 or 2)
     '''
-    assert xi in [1, -1]
+    assert feq.shape[0] == 4
     assert layer in [1, 2]
 
     # The occupation should be zero at the edges of the window defined by kx,
@@ -25,9 +30,9 @@ def n_valley_layer(kx, ky, feq, Psi, EF, T=0, xi=1, layer=1):
     # at the boundaries (this will print a message if not):
     check_f_boundaries(feq)
 
-    if (layer == 1 and xi == 1) or (layer == 2 and xi == -1):
+    if layer == 1:
         weight = abs(Psi[:, 0, :, :]) ** 2 + abs(Psi[:, 3, :, :]) ** 2
-    elif (layer == 2 and xi == 1) or (layer == 1 and xi == -1):
+    else:
         weight = abs(Psi[:, 1, :, :]) ** 2 + abs(Psi[:, 2, :, :]) ** 2
 
     integrand = (2 * 2 / (2 * np.pi) ** 2) * feq * weight
@@ -41,7 +46,7 @@ def n_valley_layer(kx, ky, feq, Psi, EF, T=0, xi=1, layer=1):
     return integral.sum()
 
 
-def n_layer(kx, ky, feq1, feq2, Psi1, Psi2, EF, T=0, layer=1):
+def n_layer(kx, ky, feq1, feq2, Psi1, Psi2, layer=1):
     '''
     Calculate the contribution to the carrier density on layer 1/2 considering
     both valleys.
@@ -50,19 +55,17 @@ def n_layer(kx, ky, feq1, feq2, Psi1, Psi2, EF, T=0, layer=1):
     - kx, ky: Nkx, Nky arrays of kx, ky points
     - feq1, feq2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
     - Psi1, Psi2: N(=4) x N(=4) x Nkx x Nky arrays of eigenstates for K and K'
-    - EF: Fermi energy (eV)
-    - T: temperature (K)
     - layer: layer number (1 or 2)
     '''
     assert layer in [1, 2]
 
-    n = n_valley_layer(kx, ky, feq1, Psi1, EF, T=T, layer=layer) \
-      + n_valley_layer(kx, ky, feq2, Psi2, EF, T=T, layer=layer)
+    n = n_valley_layer(kx, ky, feq1, Psi1, layer=layer) \
+      + n_valley_layer(kx, ky, feq2, Psi2, layer=layer)
 
     return n
 
 
-def n_valley(kx, ky, feq, EF, T=0):
+def n_valley(kx, ky, feq):
     '''
     Integrates the Fermi-Dirac distribution to calculate the total carrier
     density (in m^-2). This is the contribution from only one of the two valleys
@@ -83,7 +86,7 @@ def n_valley(kx, ky, feq, EF, T=0):
     return simps(simps(integrand, ky, axis=-1), kx, axis=-1).sum()
 
 
-def ntot_func(kx, ky, feq1, feq2, EF, T=0):
+def ntot_func(kx, ky, feq1, feq2):
     '''
     Integrates the Fermi-Dirac distribution to calculate the total carrier
     density (in m^-2). This is the sum of contributions from both valleys.
@@ -94,7 +97,7 @@ def ntot_func(kx, ky, feq1, feq2, EF, T=0):
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
-    return n_valley(kx, ky, feq1, EF, T=T) + n_valley(kx, ky, feq2, EF, T=T)
+    return n_valley(kx, ky, feq1) + n_valley(kx, ky, feq2)
 
 
 def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
@@ -111,6 +114,7 @@ def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
+    raise Exception('Need to fix')
     Ex, Ey = np.array(Efield)
 
     feq = feq_func(E, EF, T)

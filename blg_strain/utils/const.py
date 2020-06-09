@@ -17,7 +17,7 @@ nu = 0.165  # Poisson ratio for graphene (in general this should be that of the 
 
 # Hopping parameters (eV)
 gamma0 = 3.161
-gamma1 = 0.381 
+gamma1 = 0.381
 gamma3 = 0.38
 gamma4 = 0.14 * 0
 dab = 0.022 * 0 # dimer asymmetry
@@ -27,9 +27,12 @@ v0 = np.sqrt(3) * a * gamma0 / (2 * hbar)
 v3 = np.sqrt(3) * a * gamma3 / (2 * hbar)
 v4 = np.sqrt(3) * a * gamma4 / (2 * hbar)
 
-#Effectivemass for 2x2 Hamiltonian
+# Effective mass for 2x2 Hamiltonian
 meff = gamma1 / (2 * v0 ** 2)
 
+# Lifshitz transition
+kL = meff * v3 / hbar  # m^-1
+EL = hbar * kL * v3 / 2  # eV
 
 # Estimated Gruneisen parameters
 # eta0 = -2
