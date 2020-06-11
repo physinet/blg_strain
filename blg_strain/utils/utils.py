@@ -51,4 +51,7 @@ def get_splines(kx, ky, *args):
         for idx in np.ndindex(arg.shape[:-2]):
             splines[i][idx] = RectBivariateSpline(kx, ky, arg[idx])
 
-    return (*splines,)
+    if len(splines) == 1:
+        return splines[0]
+    else:
+        return splines

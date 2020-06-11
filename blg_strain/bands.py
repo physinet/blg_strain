@@ -76,6 +76,7 @@ def _get_bands(Kx, Ky, xi=1, eigh=True, **params):
 
     if not eigh:
         E, Psi = sort_eigen(E, Psi)
+        E = E.real
 
     if eigh:
         Psi = force_first_component_positive(Psi)
