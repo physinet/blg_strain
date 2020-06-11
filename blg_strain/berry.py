@@ -2,6 +2,7 @@ import numpy as np
 
 from .hamiltonian import H_dkx, H_dky, H2_dkx, H2_dky
 from .utils.const import q, hbar, muB
+from .utils.utils import get_splines
 
 def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True):
     '''
@@ -74,3 +75,64 @@ def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True):
                 # result should be dimensionless
 
     return Omega, Mu
+
+
+def berry_connection(kx, ky, splPr, splPi):
+    '''
+    Returns the Berry connection A = -i<n|∇|n> from the eigenstates of the
+    diagonalized Hamiltonian. This may not work with eigenstates calculated
+    using np.linalg.eigh because they are not smoothly differentiable.
+    Eigenstates calculated using the slower np.linalg.eig appear to work.
+
+    Params:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - splPr, splPi: N(=4) x N(=4) arrays of splines for energy eigenvectors.
+        splPr contains the real part, splPi contains the imaginary part.
+
+    Returns:
+    - Ax, Ay: N(=4) x Nkx x Nky arrays for x,y components of Berry connection
+        (z component is zero)
+    '''
+    Ax = np.empty((splPr.shape[0], len(kx), len(ky)), dtype='complex')
+    Ay = np.empty_like(Ax)
+
+    for n in range(splPr.shape[0]): # Index over bands
+        psi = np.empty_like(Ax)
+        psi_dkx = np.empty_like(Ax)
+        psi_dky = np.empty_like(Ax)
+
+        for m in range(splPr.shape[1]): # Index over components of eigenvector
+            psi[m] = splPr[n,m](kx, ky) + 1j * splPi[n,m](kx, ky)
+
+            psi_dkx[m] = splPr[n,m](kx, ky, dx=1) + 1j \
+                        * splPi[n,m](kx, ky, dx=1)
+            psi_dky[m] = splPr[n,m](kx, ky, dy=1) + 1j \
+                        * splPi[n,m](kx, ky, dy=1)
+
+        Ax[n] = 1j * np.einsum('ijk,ijk->jk', psi.conjugate(), psi_dkx, \
+                    optimize=True)
+        Ay[n] = 1j * np.einsum('ijk,ijk->jk', psi.conjugate(), psi_dky, \
+                    optimize=True)
+
+    return Ax, Ay
+
+
+def berry_from_connection(kx, ky, Ax, Ay):
+    '''
+    Calculates Berry curvature ∇ x A given the components of the Berry
+        connection A.
+
+    Params:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - Ax, Ay: N(=4) x Nkx x Nky arrays for x,y components of Berry connection
+
+    Returns:
+    - Oz: N(=4) x Nkx x Nky array of Berry curvature (z component; others zero)
+    '''
+    sxr, sxi, syr, syi = get_splines(kx, ky, Ax.real, Ax.imag, Ay.real, Ay.imag)
+    Oz = np.empty_like(Ax)
+    for n in range(Ax.shape[0]):
+        Oz[n] = syr[n](kx, ky, dx=1) - sxr[n](kx, ky, dy=1)
+        Oz[n] += 1j * (syi[n](kx, ky, dx=1) - sxi[n](kx, ky, dy=1))
+
+    return Oz
