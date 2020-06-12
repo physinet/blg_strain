@@ -100,39 +100,49 @@ def ntot_func(kx, ky, feq1, feq2):
     return n_valley(kx, ky, feq1) + n_valley(kx, ky, feq2)
 
 
-def M_func_K(kx, ky, E, Omega, Mu, Efield=[0,0], tau=0, EF=0, T=0):
+def M_valley(kx, ky, f, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
     '''
     Integrates over k space to get orbital magnetization for one valley.
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: N(=4) x Nkx x Nky array of energy eigenvalues
-    - Omega: N(=4) x Nkx x Nky array of berry curvature
-    - Mu: N(=4) x Nkx x Nky array of magnetic moment (in Bohr magnetons)
+    - f: N(=4) x Nkx x Nky array of occupation
+    - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
+        / magnetic moment) in each band
     - Efield: length-2 array of electric field x/y components (V/m)
     - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
-    - T: temperature (K)
     '''
-    raise Exception('Need to fix')
     Ex, Ey = np.array(Efield)
 
-    feq = feq_func(E, EF, T)
+    N = f.shape[0]
 
-    E_dkx, E_dky = np.gradient(E, kx, ky, axis=(-2,-1))
-    Omega_dkx, Omega_dky = np.gradient(Omega, kx, ky, axis=(-2,-1))
-    Mu_dkx, Mu_dky = np.gradient(Mu, kx, ky, axis=(-2,-1))
+    M = np.empty(N)
 
-    integrandx = - q * tau * Ex / hbar / (2 * np.pi) ** 2 * feq * \
-                 (Mu_dkx * muB + q * Omega_dkx / hbar * (EF-E) \
-                               - q * Omega / hbar * E_dkx)
-    integrandy = - q * tau * Ey / hbar / (2 * np.pi) ** 2 * feq * \
-                 (Mu_dky * muB + q * Omega_dky / hbar * (EF-E) \
-                               - q * Omega / hbar * E_dky)
+    for i in range(N):
+        E = splE[i](kx, ky)
+        O = splO[i](kx, ky)
+        Mu = splM[i](kx, ky)
 
-    integral = simps(simps(integrandx + integrandy, ky, axis=-1), kx, axis=-1)
+        E_dkx, E_dky = [splE[i](kx, ky, dx=1), splE[i](kx, ky, dy=1)]
+        O_dkx, O_dky = [splO[i](kx, ky, dx=1), splO[i](kx, ky, dy=1)]
+        Mu_dkx, Mu_dky = [splM[i](kx, ky, dx=1), splM[i](kx, ky, dy=1)]
 
-    return integral.sum(axis=0) # sum over bands
+        prefactor = - q * tau / hbar / (2 * np.pi) ** 2 * f[i]
+        integrandx = prefactor * Ex * (Mu_dkx * muB \
+                                     + q / hbar * O_dkx * (EF - E[i]) \
+                                     - q / hbar * O[i] * E_dkx
+        )
+        integrandy = prefactor * Ey * (Mu_dky * muB \
+                                     + q / hbar * O_dky * (EF - E[i]) \
+                                     - q / hbar * O[i] * E_dky
+        )
+
+        integral = simps(simps(integrandx + integrandy, ky, axis=-1), kx, axis=-1)
+
+        M[i] = integral
+
+    return M.sum(axis=0) # sum over bands
 
 
 def D_valley(kx, ky, f, splO):
