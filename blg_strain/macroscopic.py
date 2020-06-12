@@ -3,7 +3,7 @@ from scipy.integrate import simps
 from scipy.interpolate import RectBivariateSpline
 
 from .microscopic import check_f_boundaries
-from .utils.const import q, hbar, muB
+from .utils.const import q, hbar, muB, eps0, d
 
 def n_valley_layer(kx, ky, feq, Psi, layer=1):
     '''
@@ -21,7 +21,7 @@ def n_valley_layer(kx, ky, feq, Psi, layer=1):
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenstates for a given valley
     - layer: layer number (1 or 2)
     '''
-    assert feq.shape[0] == 4
+    assert feq.shape[0] == 4, 'Layer density needs 4x4 eigenstates'
     assert layer in [1, 2]
 
     # The occupation should be zero at the edges of the window defined by kx,
@@ -98,6 +98,25 @@ def ntot_func(kx, ky, feq1, feq2):
     - T: temperature (K)
     '''
     return n_valley(kx, ky, feq1) + n_valley(kx, ky, feq2)
+
+
+def disp_field(Delta, nt, nb):
+    '''
+    Returns the electric displacement field D/epsilon0 across bilayer graphene
+    corresponding to an interlayer asymmetry Delta and carrier density on each
+    layer nt and nb. We divide by the vacuum permittivity epsilon0 and return
+    the displacement field in units of electric field (mV/nm)
+
+    Parameters:
+    - Delta: interlayer asymmetry (eV)
+    - nt (nb): carrier density on top (bottom) layer (m^-2)
+
+    Returns:
+    - D: electric displacement field (?)
+    '''
+    D = Delta / d - q / eps0 * (nt - nb)  # note Delta in eV,
+                                          # so we leave out e in denominator
+    return D / 1e6  # V/m -> mV/nm
 
 
 def M_valley(kx, ky, f, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
