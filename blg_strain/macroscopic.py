@@ -148,16 +148,16 @@ def M_valley(kx, ky, f, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
         Mu_dkx, Mu_dky = [splM[i](kx, ky, dx=1), splM[i](kx, ky, dy=1)]
 
         prefactor = - q * tau / hbar / (2 * np.pi) ** 2 * f[i]
-        integrandx = prefactor * Ex * (Mu_dkx * muB \
-                                     + q / hbar * O_dkx * (EF - E[i]) \
-                                     - q / hbar * O[i] * E_dkx
+        ix = prefactor * Ex * (Mu_dkx * muB \
+                             + q / hbar * O_dkx * (EF - E[i]) \
+                             - q / hbar * O[i] * E_dkx
         )
-        integrandy = prefactor * Ey * (Mu_dky * muB \
-                                     + q / hbar * O_dky * (EF - E[i]) \
-                                     - q / hbar * O[i] * E_dky
+        iy = prefactor * Ey * (Mu_dky * muB \
+                             + q / hbar * O_dky * (EF - E[i]) \
+                             - q / hbar * O[i] * E_dky
         )
 
-        integral = simps(simps(integrandx + integrandy, ky, axis=-1), kx, axis=-1)
+        integral = simps(simps(ix + iy, ky, axis=-1), kx, axis=-1)
 
         M[i] = integral
 
