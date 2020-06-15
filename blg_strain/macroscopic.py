@@ -119,6 +119,75 @@ def disp_field(Delta, nt, nb):
     return D / 1e6  # V/m -> mV/nm
 
 
+def _M_integral(kx, ky, f, splE, splO, splM, tau=0, EF=0):
+    '''
+    Integrates over k space as part of the calculation for orbital magnetization
+    for one valley and one band. Dotted with an applied electric field gives the
+    magnetization for each band.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - f: Nkx x Nky array of occupation
+    - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
+        moment) for the given band
+    - tau: scattering time (s). In general an Nkx x Nky array.
+    - EF: Fermi energy (eV)
+
+    Returns:
+    - a length-2 array of magnetization "divided by" electric field
+    '''
+    E = splE(kx, ky)
+    O = splO(kx, ky)
+    Mu = splM(kx, ky)
+
+    E_dkx, E_dky = [splE(kx, ky, dx=1), splE(kx, ky, dy=1)]
+    O_dkx, O_dky = [splO(kx, ky, dx=1), splO(kx, ky, dy=1)]
+    Mu_dkx, Mu_dky = [splM(kx, ky, dx=1), splM(kx, ky, dy=1)]
+
+    prefactor = - q * tau / hbar / (2 * np.pi) ** 2 * f
+    ix = prefactor * (Mu_dkx * muB \
+                     + q / hbar * O_dkx * (EF - E) \
+                     - q / hbar * O * E_dkx
+    )
+    iy = prefactor * (Mu_dky * muB \
+                     + q / hbar * O_dky * (EF - E) \
+                     - q / hbar * O * E_dky
+    )
+
+    integrand = np.array([ix, iy])
+    integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
+
+    return integral
+
+
+def _M_bands(kx, ky, f, splE, splO, splM, tau=0, EF=0):
+    '''
+    Calculates the integral for orbital magnetization for each of four bands
+    and sums over bands. Dotted with an applied electric field gives the
+    total magnetization.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - f: N(=4) x Nkx x Nky array of occupation
+    - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
+        / magnetic moment) in each band
+    - Efield: length-2 array of electric field x/y components (V/m)
+    - tau: scattering time (s). In general an Nkx x Nky array.
+    - EF: Fermi energy (eV)
+
+    Returns:
+    - a length-2 array of magnetization "divided by" electric field
+    '''
+    N = f.shape[0]
+    M_no_dot_E = np.empty((N, 2))  # second dim is two components of integrand
+
+    for i in range(N):
+        M_no_dot_E[i] = _M_integral(kx, ky, f[i], splE[i], splO[i], splM[i],
+                            tau=tau, EF=EF)
+
+    return M_no_dot_E.sum(axis=0)  # sum over bands
+
+
 def M_valley(kx, ky, f, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
     '''
     Integrates over k space to get orbital magnetization for one valley.
@@ -131,37 +200,11 @@ def M_valley(kx, ky, f, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
     - Efield: length-2 array of electric field x/y components (V/m)
     - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
+
+    Returns:
+    - 2D orbital magnetization (Ampere)
     '''
-    Ex, Ey = np.array(Efield)
-
-    N = f.shape[0]
-
-    M = np.empty(N)
-
-    for i in range(N):
-        E = splE[i](kx, ky)
-        O = splO[i](kx, ky)
-        Mu = splM[i](kx, ky)
-
-        E_dkx, E_dky = [splE[i](kx, ky, dx=1), splE[i](kx, ky, dy=1)]
-        O_dkx, O_dky = [splO[i](kx, ky, dx=1), splO[i](kx, ky, dy=1)]
-        Mu_dkx, Mu_dky = [splM[i](kx, ky, dx=1), splM[i](kx, ky, dy=1)]
-
-        prefactor = - q * tau / hbar / (2 * np.pi) ** 2 * f[i]
-        ix = prefactor * Ex * (Mu_dkx * muB \
-                             + q / hbar * O_dkx * (EF - E[i]) \
-                             - q / hbar * O[i] * E_dkx
-        )
-        iy = prefactor * Ey * (Mu_dky * muB \
-                             + q / hbar * O_dky * (EF - E[i]) \
-                             - q / hbar * O[i] * E_dky
-        )
-
-        integral = simps(simps(ix + iy, ky, axis=-1), kx, axis=-1)
-
-        M[i] = integral
-
-    return M.sum(axis=0) # sum over bands
+    return _M_bands(kx, ky, f, splE, splO, splM, tau=tau, EF=EF).dot(Efield)
 
 
 def D_valley(kx, ky, f, splO):
