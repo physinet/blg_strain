@@ -1,3 +1,5 @@
+import numpy as np
+
 from .bands import get_bands
 from .berry import berry_mu
 from .macroscopic import ntot_func, M_valley
@@ -31,6 +33,7 @@ class BandStructure:
         self.kx, self.ky, self.E, self.Omega, self.Mu = \
             densify(self._kx, self._ky, self.splE, self.splO, self.splM, \
                 Nkx_new=Nkx_new, Nky_new=Nky_new)
+        self.Kx, self.Ky = np.meshgrid(self.kx, self.ky, indexing='ij')
 
 
 class BothValleys:

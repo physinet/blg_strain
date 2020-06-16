@@ -226,17 +226,3 @@ def D_valley(kx, ky, f, splO):
             # integral over y (axis -1) then x (axis -1 of the result of simps)
 
     return D  # not yet summed over bands
-
-
-def D_func(kx, ky, f1, f2, splO1, splO2):
-    '''
-    Integrates over k space to get Berry curvature dipole. This is the sum of
-    contributions from both valleys. Integral is not summed over bands!
-
-    Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
-    - f1, f2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
-    - splO1, splO2: N(=4) array of splines for berry curvature in K and K'
-    '''
-    return D_valley(kx, ky, f1, splO1) \
-         + D_valley(kx, ky, f2, splO2)
