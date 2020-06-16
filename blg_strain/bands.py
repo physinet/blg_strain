@@ -32,6 +32,7 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
 
     Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
 
+
     E, Psi = _get_bands(Kx, Ky, xi=xi, Delta=Delta, delta=delta,
                         theta=theta, twobytwo=twobytwo, eigh=eigh)
 
@@ -53,7 +54,6 @@ def _get_bands(Kx, Ky, xi=1, eigh=True, **params):
     - E: N(=4) x Nkx x Nky array of energy eigenvalues
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenvectors
     '''
-
     H = Hfunc(Kx, Ky, xi=xi, **params)
 
     H = H.transpose(2,3,0,1) # put the 4x4 in the last 2 dims for eigh
@@ -74,12 +74,14 @@ def _get_bands(Kx, Ky, xi=1, eigh=True, **params):
     # now E[:, 0, 0] is a length-4 array of eigenvalues
     # and Psi[:, :, 0, 0] is a 4x4 array of eigenvectors (in the columns)
 
-    if not eigh:
+    if eigh:
+        Psi = fix_first_component_sign(Psi)
+
+    else:
         E, Psi = sort_eigen(E, Psi)
         E = E.real
 
-    if eigh:
-        Psi = force_first_component_positive(Psi)
+
 
 
     # Finally, transpose first 2 dimensions to put the eigenvectors in the rows
@@ -112,7 +114,7 @@ def sort_eigen(eigs, vecs):
     return eigs[tuple(indE)], vecs[tuple(indV)]
 
 
-def force_first_component_positive(Psi):
+def fix_first_component_sign(Psi):
     '''
     Addresses sign ambiguity in eigenvectors by focing first component positive
     '''

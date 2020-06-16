@@ -10,10 +10,14 @@ class BandStructure:
     '''
     Class to contain results of calculations involving only the Hamiltonian
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, xi=1, **kwargs):
         '''
+        xi - valley index (1 or -1)
         kwargs passed to get_bands
         '''
+        assert xi in [1, -1], 'Valley index must be either 1 or -1!'
+        self.xi = xi
+
         self.kwargs = kwargs
 
     def calculate(self, Nkx_new=2000, Nky_new=2000):
@@ -24,8 +28,9 @@ class BandStructure:
         '''
         # Initial calculations with the number of points given in kwargs
         self._kx, self._ky, self._Kx, self._Ky, self._E, self._Psi = \
-            get_bands(**self.kwargs)
-        self._Omega, self._Mu = berry_mu(self._Kx, self._Ky, self._E, self._Psi)
+            get_bands(xi=self.xi, **self.kwargs)
+        self._Omega, self._Mu = berry_mu(self._Kx, self._Ky, self._E, self._Psi,
+            xi=self.xi)
 
         # Calculate spline interpolations and dense grid
         self.splE, self.splO, self.splM = \

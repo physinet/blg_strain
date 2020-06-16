@@ -127,13 +127,18 @@ def H_2by2(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     pi = xi * px + 1j * py
     pidag = xi * px - 1j * py
 
-    # Moulsdale with added xi * v3 * pi (was this an intentional omission?)
+    pi2 = px + 1j * py
+    pidag2 = px - 1j * py
+
+    # Moulsdale with added trigonal warping terms.
+    # Note: involves pi == px + i*py (no xi)
     H = np.array([
-        [-Deltao / 2, -pidag ** 2 / (2 * meff) + xi * v3 * pi + w3],
-        [-pi **2 / (2 * meff) + xi * v3 * pidag + w3s,   Deltao / 2]
+        [-Deltao / 2, -pidag2 ** 2 / (2 * meff) + xi * v3 * pi2 + w3],
+        [-pi2 ** 2 / (2 * meff) + xi * v3 * pidag2 + w3s, Deltao / 2]
     ])
 
-    # Battilomo (with missing xi - Berry curvature equal/opposite in valleys)
+    # Battilomo
+    # Berry curvature equal/opposite in valleys
     # H = np.array([
     #     [Deltao / 2, -1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3 + 1j/meff * px * py + 1j * xi * v3 * py],
     #     [-1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3s - 1j/meff * px * py - 1j * xi * v3 * py,   -Deltao / 2]

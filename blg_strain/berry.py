@@ -41,7 +41,7 @@ def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True):
                 # i and l index the components of the eigenvectors for bands n and m
                 # the H' matrix is indexed with il to contract these indices
                 # j and k index over the kx, ky points and are the dimensions left
-                if hdkx.ndim == 2: # 4x4
+                if hdkx.ndim == 2:  # 4x4
                     prod1 = np.einsum('ijk,il,ljk->jk', psi_n.conj(), hdkx, psi_m,
                                 optimize=True)
                     prod2 = np.einsum('ijk,il,ljk->jk', psi_m.conj(), hdky, psi_n,
