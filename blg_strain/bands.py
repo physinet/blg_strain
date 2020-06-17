@@ -19,7 +19,8 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
     - delta: uniaxial strain
     - theta: angle of uniaxial strain to zigzag axis
     - ham: str or array - Select choice of Hamiltonian with a string
-        (choices are '4x4' or '2x2') or pass array of precomputed Hamiltonian.
+        (choices are '4x4' or '2x2') or pass precompuuted array consistent with
+        the arrays made with `make_grid(kxlims, kylims, Nkx, Nky)`.
         Shape is N x N (x Nkx x Nky), where the last two dimensions are included
         if the Hamiltonian varies with kx and ky.
     - eigh: if True, use np.linalg.eigh; if False use np.linalg.eig

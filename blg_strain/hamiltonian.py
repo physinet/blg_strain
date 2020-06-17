@@ -27,8 +27,8 @@ def H_4by4(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     gamma1o = gamma1 * o
 
     # Gauge fields
-    w3 = w(delta, idx=3, xi=xi, theta=0) * o
-    w4 = w(delta, idx=4, xi=xi, theta=0) * o
+    w3 = w(delta, idx=3, xi=xi, theta=theta) * o
+    w4 = w(delta, idx=4, xi=xi, theta=theta) * o
 
     w3s = w3.conjugate()
     w4s = w4.conjugate()
@@ -107,19 +107,19 @@ def H_2by2(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     pi = px + 1j * py  # note: no xi!
     pidag = px - 1j * py
 
-    # Moulsdale with added trigonal warping terms. Added xi outside.
-    # H = xi * np.array([
-    #     [-Deltao / 2, -pidag ** 2 / (2 * meff) + xi * v3 * pi + w3],
-    #     [-pi ** 2 / (2 * meff) + xi * v3 * pidag + w3s, Deltao / 2]
-    # ])
+    # Moulsdale with added trigonal warping terms.
+    H = np.array([
+        [-Deltao / 2, -pidag ** 2 / (2 * meff) + v3 * pi + w3],
+        [-pi ** 2 / (2 * meff) + v3 * pidag + w3s, Deltao / 2]
+    ])
 
     # Battilomo
-    # note this is written in a different basis than above
-    # Added xi to Delta terms
-    H = np.array([
-        [xi * Deltao / 2, -1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3 + 1j/meff * px * py + 1j * xi * v3 * py],
-        [-1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3s - 1j/meff * px * py - 1j * xi * v3 * py,   -xi * Deltao / 2]
-    ])
+    # note this is written in a different basis than above (or interlayer
+    # displacement is defined oppositely)
+    # H = np.array([
+    #     [Deltao / 2, -1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3 + 1j/meff * px * py + 1j * xi * v3 * py],
+    #     [-1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3s - 1j/meff * px * py - 1j * xi * v3 * py,   -Deltao / 2]
+    # ])
 
     return H
 
@@ -135,15 +135,15 @@ def H2_dkx(Kx, Ky, xi=1):
     '''
     # Momentum
     px, py = hbar * Kx, hbar * Ky
-    pi = px + 1j * py  # note: no xi!
-    pidag = px - 1j * py
+    pi = xi *  px + 1j * py
+    pidag = xi * px - 1j * py
 
     # dH/dkx = (dH/dpi)*(dpi/dkx) + (dH/dpidag)*(dpidag/dkx)
-    #        = (dH/dpi)*hbar + (dH/dpidag)*hbar
+    #        = (dH/dpi)*xi*hbar + (dH/dpidag)*xi*hbar
     return np.array([
-        [0 * Kx, -pidag / meff + xi * v3],
-        [-pi / meff + xi * v3,  0 * Kx]
-    ]) * hbar
+        [0 * Kx, -pidag / meff + v3],
+        [-pi / meff + v3,  0 * Kx]
+    ]) * xi * hbar
 
 
 def H2_dky(Kx, Ky, xi=1):
@@ -157,12 +157,12 @@ def H2_dky(Kx, Ky, xi=1):
     '''
     # Momentum
     px, py = hbar * Kx, hbar * Ky
-    pi = px + 1j * py  # note: no xi!
-    pidag = px - 1j * py
+    pi = xi * px + 1j * py 
+    pidag = xi * px - 1j * py
 
     # dH/dky = (dH/dpi)*(dpi/dky) + (dH/dpidag)*(dpidag/dky)
     #        = (dH/dpi)*i*hbar + (dH/dpidag)*(-i)*hbar
     return np.array([
-        [0 * Kx, pidag / meff + xi * v3],
-        [-pi / meff - xi * v3,  0 * Kx]
+        [0 * Kx, pidag / meff +  v3],
+        [-pi / meff - v3,  0 * Kx]
     ]) * 1j * hbar
