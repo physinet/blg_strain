@@ -1,10 +1,11 @@
 import numpy as np
 
 from .berry import berry_mu
-from .hamiltonian import Hfunc
+from .hamiltonian import H_4by4, H_2by2
+from .utils.utils import make_grid
 
 def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
-                Nky=200, xi=1, Delta=0, delta=0, theta=0, twobytwo=False,
+                Nky=200, xi=1, Delta=0, delta=0, theta=0, ham='4x4',
                 eigh=False):
     '''
     Calculate energy eigenvalues, eigenvectors, berry curvature, and magnetic
@@ -17,7 +18,10 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
     - Delta: interlayer asymmetry (eV)
     - delta: uniaxial strain
     - theta: angle of uniaxial strain to zigzag axis
-    - twobytwo: if True, use 2x2 Hamiltonian (N=2 for all returned values)
+    - ham: str or array - Select choice of Hamiltonian with a string
+        (choices are '4x4' or '2x2') or pass array of precomputed Hamiltonian.
+        Shape is N x N (x Nkx x Nky), where the last two dimensions are included
+        if the Hamiltonian varies with kx and ky.
     - eigh: if True, use np.linalg.eigh; if False use np.linalg.eig
 
     Returns:
@@ -27,19 +31,15 @@ def get_bands(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
     - E: N(=4) x Nkx x Nky array of energy eigenvalues
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenvectors
     '''
-    kx = np.linspace(kxlims[0], kxlims[1], Nkx)
-    ky = np.linspace(kylims[0], kylims[1], Nky)
-
-    Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
-
+    kx, ky, Kx, Ky = make_grid(kxlims, kylims, Nkx, Nky)
 
     E, Psi = _get_bands(Kx, Ky, xi=xi, Delta=Delta, delta=delta,
-                        theta=theta, twobytwo=twobytwo, eigh=eigh)
+                        theta=theta, ham=ham, eigh=eigh)
 
     return kx, ky, Kx, Ky, E, Psi
 
 
-def _get_bands(Kx, Ky, xi=1, eigh=True, **params):
+def _get_bands(Kx, Ky, xi=1, eigh=True, ham='4x4', **params):
     '''
     Calculate energy eigenvalues, eigenvectors, berry curvature, and magnetic
     moment for a rectangular window of k-space.
@@ -47,14 +47,26 @@ def _get_bands(Kx, Ky, xi=1, eigh=True, **params):
     Parameters:
     - Kx, Ky: Nkx x Nky meshgrid of kx, ky points (using 'ij' indexing)
     - xi: valley index (+1 for K, -1 for K')
-    - eigh: if True, use np.linalg.eigh; if False use np.linalg.eig
-    - params: passed to `hamiltonian.H_func`
+    - eigh: if True, use np.linalg.eigh; if False use np.linalg.ei
+    - hamiltonian: str or array - Select choice of Hamiltonian with a string
+        (choices are '4x4' or '2x2') or pass array of precomputed Hamiltonian
+        with shape N x N x Nkx x Nky.
+    - params: passed to `hamiltonian.H_4by4` or `hamiltonian.H_2by2`
 
     Returns:
     - E: N(=4) x Nkx x Nky array of energy eigenvalues
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenvectors
     '''
-    H = Hfunc(Kx, Ky, xi=xi, **params)
+    assert type(ham) in (str, np.ndarray), 'ham param should be str or array'
+    if type(ham) is str:
+        assert ham in ('4x4', '2x2'), 'ham parameter must be \'2x2\' or \
+            \'4x4\', or you must pass an array'
+        if ham == '4x4':
+            H = H_4by4(Kx, Ky, xi=xi, **params)
+        elif ham == '2x2':
+            H = H_2by2(Kx, Ky, xi=xi, **params)
+    else:
+        H = ham  # an array
 
     H = H.transpose(2,3,0,1) # put the 4x4 in the last 2 dims for eigh
 

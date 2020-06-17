@@ -4,26 +4,6 @@ from .utils.const import nu, eta0, eta3, eta4, \
                          dab, v0, v3, v4, hbar, meff
 from .utils.params import w
 
-def Hfunc(Kx, Ky, xi=1, Delta=0, delta=0, theta=0, twobytwo=False):
-    '''
-    Calculates the low-energy Hamiltonian for uniaxially strained BLG.
-
-    Parameters:
-    - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
-    - xi: valley index (+1 for K, -1 for K')
-    - Delta: interlayer asymmetry (eV)
-    - delta: uniaxial strain
-    - theta: angle of uniaxial strain to zigzag axis
-    - twobytwo: if True, use 2x2 Hamiltonian (N=2). If False, use 4x4 (N=4)
-
-    Returns:
-    - H: Hamiltonian array shape N x N x Nkx x Nky
-    '''
-    if twobytwo:
-        return H_2by2(Kx, Ky, xi=xi, Delta=Delta, delta=delta, theta=theta)
-    else:
-        return H_4by4(Kx, Ky, xi=xi, Delta=Delta, delta=delta, theta=theta)
-
 
 def H_4by4(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
     '''
@@ -124,25 +104,22 @@ def H_2by2(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
 
     # Momentum
     px, py = hbar * Kx, hbar * Ky
-    pi = xi * px + 1j * py
-    pidag = xi * px - 1j * py
+    pi = px + 1j * py  # note: no xi!
+    pidag = px - 1j * py
 
-    pi2 = px + 1j * py
-    pidag2 = px - 1j * py
-
-    # Moulsdale with added trigonal warping terms.
-    # Note: involves pi == px + i*py (no xi)
-    H = np.array([
-        [-Deltao / 2, -pidag2 ** 2 / (2 * meff) + xi * v3 * pi2 + w3],
-        [-pi2 ** 2 / (2 * meff) + xi * v3 * pidag2 + w3s, Deltao / 2]
-    ])
+    # Moulsdale with added trigonal warping terms. Added xi outside.
+    # H = xi * np.array([
+    #     [-Deltao / 2, -pidag ** 2 / (2 * meff) + xi * v3 * pi + w3],
+    #     [-pi ** 2 / (2 * meff) + xi * v3 * pidag + w3s, Deltao / 2]
+    # ])
 
     # Battilomo
-    # Berry curvature equal/opposite in valleys
-    # H = np.array([
-    #     [Deltao / 2, -1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3 + 1j/meff * px * py + 1j * xi * v3 * py],
-    #     [-1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3s - 1j/meff * px * py - 1j * xi * v3 * py,   -Deltao / 2]
-    # ])
+    # note this is written in a different basis than above
+    # Added xi to Delta terms
+    H = np.array([
+        [xi * Deltao / 2, -1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3 + 1j/meff * px * py + 1j * xi * v3 * py],
+        [-1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3s - 1j/meff * px * py - 1j * xi * v3 * py,   -xi * Deltao / 2]
+    ])
 
     return H
 
@@ -158,10 +135,10 @@ def H2_dkx(Kx, Ky, xi=1):
     '''
     # Momentum
     px, py = hbar * Kx, hbar * Ky
-    pi = xi * px + 1j * py
-    pidag = xi * px - 1j * py
+    pi = px + 1j * py  # note: no xi!
+    pidag = px - 1j * py
 
-    # dH/dkx = (dH/dpi)*(dpi/dkx) + (dHdpidag)*(dpidag/dkx)
+    # dH/dkx = (dH/dpi)*(dpi/dkx) + (dH/dpidag)*(dpidag/dkx)
     #        = (dH/dpi)*hbar + (dH/dpidag)*hbar
     return np.array([
         [0 * Kx, -pidag / meff + xi * v3],
@@ -180,10 +157,10 @@ def H2_dky(Kx, Ky, xi=1):
     '''
     # Momentum
     px, py = hbar * Kx, hbar * Ky
-    pi = xi * px + 1j * py
-    pidag = xi * px - 1j * py
+    pi = px + 1j * py  # note: no xi!
+    pidag = px - 1j * py
 
-    # dH/dky = (dH/dpi)*(dpi/dky) + (dHdpidag)*(dpidag/dky)
+    # dH/dky = (dH/dpi)*(dpi/dky) + (dH/dpidag)*(dpidag/dky)
     #        = (dH/dpi)*i*hbar + (dH/dpidag)*(-i)*hbar
     return np.array([
         [0 * Kx, pidag / meff + xi * v3],

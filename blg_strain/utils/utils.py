@@ -55,3 +55,13 @@ def get_splines(kx, ky, *args):
         return splines[0]
     else:
         return splines
+
+
+def make_grid(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
+                Nky=200):
+    kx = np.linspace(kxlims[0], kxlims[1], Nkx)
+    ky = np.linspace(kylims[0], kylims[1], Nky)
+
+    Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
+
+    return kx, ky, Kx, Ky
