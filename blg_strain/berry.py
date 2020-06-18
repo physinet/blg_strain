@@ -4,7 +4,7 @@ from .hamiltonian import H_dkx, H_dky, H2_dkx, H2_dky
 from .utils.const import q, hbar, muB
 from .utils.utils import get_splines
 
-def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True):
+def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True, H_gradient=None):
     '''
     Calculates the Berry curvature and magnetic moment given the energy
     eigenvalues and eigenvectors for N(=4) bands.
@@ -17,15 +17,21 @@ def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True):
       components of the eigenvectors.
     - xi: valley index (+1 for K, -1 for K')
     - einsum: if True, use `np.einsum` to multiply (faster than `np.tensordot`)
+    - H_gradient: 2 x N x N (x Nkx x Nky) array of [H_dkx, H_dky], where H_dkx
+        and H_dky are the derivatives of the Hamiltonian. If None, will use the
+        predefined methods in `blg_strain.hamiltonian`.
 
     Returns:
     - Omega: n(=4) x Nkx x Nky array of Berry curvature (units m^2)
     - Mu: n(=4) x Nkx x Nky array of magnetic moment (units Bohr magneton)
     '''
-    if E.shape[0] == 2:
-        hdkx, hdky = H2_dkx(Kx, Ky, xi), H2_dky(Kx, Ky, xi)
+    if H_gradient is None:
+        if E.shape[0] == 2:
+            hdkx, hdky = H2_dkx(Kx, Ky, xi), H2_dky(Kx, Ky, xi)
+        else:
+            hdkx, hdky = H_dkx(xi), H_dky(xi)  # 4x4 matrices
     else:
-        hdkx, hdky = H_dkx(xi), H_dky(xi)  # 4x4 matrices
+        hdkx, hdky = H_gradient
 
     Omega = np.zeros_like(Psi, dtype='float')  # 4 x 4 x Nkx x Nky; first dim
     Mu = np.zeros_like(Psi, dtype='float')     # summed over bands m != n
@@ -46,11 +52,13 @@ def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True):
                                 optimize=True)
                     prod2 = np.einsum('ijk,il,ljk->jk', psi_m.conj(), hdky, psi_n,
                                 optimize=True)
-                else:  # 2x2 - also depends on kx and ky so shape is 2 x 2 x Nkx x Nky
+                elif hdkx.ndim == 4:  # 2x2 - also depends on kx and ky so shape is 2 x 2 x Nkx x Nky
                     prod1 = np.einsum('ijk,iljk,ljk->jk', psi_n.conj(), hdkx, psi_m,
                                 optimize=True)
                     prod2 = np.einsum('ijk,iljk,ljk->jk', psi_m.conj(), hdky, psi_n,
                                 optimize=True)
+                else:
+                    raise Exception('hdkx and hdky have the wrong number of dims')
             else:
                 # Equivalent method (slower!)
                 # We want C = A * H * B, or c_jk = A_ijk * H_il * B_ljk

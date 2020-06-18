@@ -104,8 +104,8 @@ def H_2by2(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
 
     # Momentum
     px, py = hbar * Kx, hbar * Ky
-    pi = px + 1j * py  # note: no xi!
-    pidag = px - 1j * py
+    pi = xi * px + 1j * py  # note: no xi!
+    pidag = xi * px - 1j * py
 
     # Moulsdale with added trigonal warping terms.
     H = np.array([
@@ -157,7 +157,7 @@ def H2_dky(Kx, Ky, xi=1):
     '''
     # Momentum
     px, py = hbar * Kx, hbar * Ky
-    pi = xi * px + 1j * py 
+    pi = xi * px + 1j * py
     pidag = xi * px - 1j * py
 
     # dH/dky = (dH/dpi)*(dpi/dky) + (dH/dpidag)*(dpidag/dky)
