@@ -171,12 +171,11 @@ def _M_bands(kx, ky, f, splE, splO, splM, tau=0, EF=0):
     - f: N(=4) x Nkx x Nky array of occupation
     - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
         / magnetic moment) in each band
-    - Efield: length-2 array of electric field x/y components (V/m)
     - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
 
     Returns:
-    - a length-2 array of magnetization "divided by" electric field
+    - a length-2 array of x/y components of magnetization "divided by" E field
     '''
     N = f.shape[0]
     M_no_dot_E = np.empty((N, 2))  # second dim is two components of integrand

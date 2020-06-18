@@ -29,11 +29,11 @@ def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True, H_gradient=None):
         if E.shape[0] == 2:
             hdkx, hdky = H2_dkx(Kx, Ky, xi), H2_dky(Kx, Ky, xi)
         else:
-            hdkx, hdky = H_dkx(xi), H_dky(xi)  # 4x4 matrices
+            hdkx, hdky = H_dkx(xi), H_dky(xi)  # 4 x 4 matrices
     else:
         hdkx, hdky = H_gradient
 
-    Omega = np.zeros_like(Psi, dtype='float')  # 4 x 4 x Nkx x Nky; first dim
+    Omega = np.zeros_like(Psi, dtype='float')  # N x N x Nkx x Nky; first dim
     Mu = np.zeros_like(Psi, dtype='float')     # summed over bands m != n
 
     for n, (e_n, psi_n) in enumerate(zip(E, Psi)):
