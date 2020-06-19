@@ -212,8 +212,13 @@ def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
     N = feq.shape[0]
     M_no_dot_E = np.empty((N, 2))  # second dim is two components of integrand
 
+    if byparts:
+        integral = _M_integral_by_parts
+    else:
+        integral = _M_integral
+
     for i in range(N):
-        M_no_dot_E[i] = _M_integral(kx, ky, feq[i], splE[i], splO[i], splM[i],
+        M_no_dot_E[i] = integral(kx, ky, feq[i], splE[i], splO[i], splM[i],
                             tau=tau, EF=EF)
 
     return M_no_dot_E.sum(axis=0)  # sum over bands
