@@ -119,7 +119,7 @@ def disp_field(Delta, nt, nb):
     return D / 1e6  # V/m -> mV/nm
 
 
-def _M_integral(kx, ky, f, splE, splO, splM, tau=0, EF=0):
+def _M_integral(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
     '''
     Integrates over k space as part of the calculation for orbital magnetization
     for one valley and one band. Dotted with an applied electric field gives the
@@ -127,7 +127,7 @@ def _M_integral(kx, ky, f, splE, splO, splM, tau=0, EF=0):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - f: Nkx x Nky array of occupation
+    - feq: Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
         moment) for the given band
     - tau: scattering time (s). In general an Nkx x Nky array.
@@ -140,27 +140,56 @@ def _M_integral(kx, ky, f, splE, splO, splM, tau=0, EF=0):
     O = splO(kx, ky)
     Mu = splM(kx, ky)
 
-    E_dkx, E_dky = [splE(kx, ky, dx=1), splE(kx, ky, dy=1)]
-    O_dkx, O_dky = [splO(kx, ky, dx=1), splO(kx, ky, dy=1)]
-    Mu_dkx, Mu_dky = [splM(kx, ky, dx=1), splM(kx, ky, dy=1)]
+    # non-equilibrium occupation ("divided by" dot product with E field)
+    # equilibrium term will integrate to zero
+    f = q * tau / hbar * np.array(np.gradient(feq, kx, ky, axis=(-2, -1)))
 
-    prefactor = - q * tau / hbar / (2 * np.pi) ** 2 * f
-    ix = prefactor * (Mu_dkx * muB \
-                     + q / hbar * O_dkx * (EF - E) \
-                     - q / hbar * O * E_dkx
-    )
-    iy = prefactor * (Mu_dky * muB \
-                     + q / hbar * O_dky * (EF - E) \
-                     - q / hbar * O * E_dky
+    integrand = 1 / (2 * np.pi) **2 * f * (Mu * muB + q * O / hbar * (EF - E))
+
+    integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
+    return integral
+
+
+def _M_integral_by_parts(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
+    '''
+    Integrates over k space as part of the calculation for orbital magnetization
+    for one valley and one band. Dotted with an applied electric field gives the
+    magnetization for each band.
+
+    This is the ''integration by parts'' version in which the derivatives
+    are moved to the energy, magnetic moment, and berry curvature terms.
+
+    Parameters:
+    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - feq: Nkx x Nky array of equilibrium occupation
+    - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
+        moment) for the given band
+    - tau: scattering time (s). In general an Nkx x Nky array.
+    - EF: Fermi energy (eV)
+
+    Returns:
+    - a length-2 array of magnetization "divided by" electric field
+    '''
+    E = splE(kx, ky)
+    O = splO(kx, ky)
+    Mu = splM(kx, ky)
+
+    E_grad = np.array([splE(kx, ky, dx=1), splE(kx, ky, dy=1)])
+    O_grad = np.array([splO(kx, ky, dx=1), splO(kx, ky, dy=1)])
+    Mu_grad = np.array([splM(kx, ky, dx=1), splM(kx, ky, dy=1)])
+
+    prefactor = - q * tau / hbar / (2 * np.pi) ** 2 * feq
+    integrand = prefactor * (Mu_grad * muB \
+                     + q / hbar * O_grad * (EF - E) \
+                     - q / hbar * O * E_grad
     )
 
-    integrand = np.array([ix, iy])
     integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
 
     return integral
 
 
-def _M_bands(kx, ky, f, splE, splO, splM, tau=0, EF=0):
+def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
     '''
     Calculates the integral for orbital magnetization for each of four bands
     and sums over bands. Dotted with an applied electric field gives the
@@ -168,32 +197,35 @@ def _M_bands(kx, ky, f, splE, splO, splM, tau=0, EF=0):
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - f: N(=4) x Nkx x Nky array of occupation
+    - feq: N(=4) x Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
         / magnetic moment) in each band
     - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
+    - byparts: if True, will use the "integration by parts" version of the
+        integral (function `_M_integral_by_parts`). If False, will use the
+        function `_M_integral`
 
     Returns:
     - a length-2 array of x/y components of magnetization "divided by" E field
     '''
-    N = f.shape[0]
+    N = feq.shape[0]
     M_no_dot_E = np.empty((N, 2))  # second dim is two components of integrand
 
     for i in range(N):
-        M_no_dot_E[i] = _M_integral(kx, ky, f[i], splE[i], splO[i], splM[i],
+        M_no_dot_E[i] = _M_integral(kx, ky, feq[i], splE[i], splO[i], splM[i],
                             tau=tau, EF=EF)
 
     return M_no_dot_E.sum(axis=0)  # sum over bands
 
 
-def M_valley(kx, ky, f, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
+def M_valley(kx, ky, feq, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
     '''
     Integrates over k space to get orbital magnetization for one valley.
 
     Parameters:
     - kx, ky: Nkx, Nky arrays of kx, ky points
-    - f: N(=4) x Nkx x Nky array of occupation
+    - feq: N(=4) x Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
         / magnetic moment) in each band
     - Efield: length-2 array of electric field x/y components (V/m)
@@ -203,7 +235,7 @@ def M_valley(kx, ky, f, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
     Returns:
     - 2D orbital magnetization (Ampere)
     '''
-    return _M_bands(kx, ky, f, splE, splO, splM, tau=tau, EF=EF).dot(Efield)
+    return _M_bands(kx, ky, feq, splE, splO, splM, tau=tau, EF=EF).dot(Efield)
 
 
 def D_valley(kx, ky, f, splO):
