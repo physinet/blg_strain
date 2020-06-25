@@ -29,8 +29,13 @@ class BandStructure:
         # Initial calculations with the number of points given in kwargs
         self._kx, self._ky, self._Kx, self._Ky, self._E, self._Psi = \
             get_bands(xi=self.xi, **self.kwargs)
+
+        if 'ham' in self.kwargs:
+            H_gradient = np.gradient(self.kwargs['ham'], self._kx, self._ky, \
+                axis=(-2,-1))
+
         self._Omega, self._Mu = berry_mu(self._Kx, self._Ky, self._E, self._Psi,
-            xi=self.xi)
+            xi=self.xi, H_gradient=H_gradient)
 
         # Calculate spline interpolations and dense grid
         self.splE, self.splO, self.splM = \
