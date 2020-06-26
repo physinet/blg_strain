@@ -77,10 +77,8 @@ def berry_mu(Kx, Ky, E, Psi, xi=1, einsum=True, H_gradient=None):
     Omega = Omega.sum(axis=0)  # perform the sum over bands
     Mu = Mu.sum(axis=0)
 
-    Omega = -2 * Omega
-    Mu = -q / hbar * Mu / muB  # -> Bohr magnetons
-                # [C / (eV * s)] * [(eV * m)^2 / eV] * [1 / A*m^2]
-                # result should be dimensionless
+    Omega = -2 * Omega  # m^2
+    Mu = -q / hbar * Mu  # A * m^2
 
     return Omega, Mu
 

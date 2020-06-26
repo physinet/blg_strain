@@ -33,6 +33,8 @@ class BandStructure:
         if 'ham' in self.kwargs:
             H_gradient = np.gradient(self.kwargs['ham'], self._kx, self._ky, \
                 axis=(-2,-1))
+        else:
+            H_gradient=None
 
         self._Omega, self._Mu = berry_mu(self._Kx, self._Ky, self._E, self._Psi,
             xi=self.xi, H_gradient=H_gradient)

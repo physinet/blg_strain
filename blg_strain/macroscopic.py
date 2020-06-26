@@ -3,7 +3,7 @@ from scipy.integrate import simps
 from scipy.interpolate import RectBivariateSpline
 
 from .microscopic import check_f_boundaries
-from .utils.const import q, hbar, muB, eps0, d
+from .utils.const import q, hbar, hbar_J, muB, eps0, d
 
 def n_valley_layer(kx, ky, feq, Psi, layer=1):
     '''
@@ -134,7 +134,8 @@ def _M_integral(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
     - EF: Fermi energy (eV)
 
     Returns:
-    - a length-2 array of magnetization "divided by" electric field
+    - a length-2 array of x/y components of magnetization "divided by" E field
+        in units of (Bohr magneton / m^2) / (V / m)
     '''
     E = splE(kx, ky)
     O = splO(kx, ky)
@@ -142,9 +143,11 @@ def _M_integral(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
 
     # non-equilibrium occupation ("divided by" dot product with E field)
     # equilibrium term will integrate to zero
-    f = q * tau / hbar * np.array(np.gradient(feq, kx, ky, axis=(-2, -1)))
+    # note prefactor hbar is in J * s
+    f = q * tau / hbar_J * np.array(np.gradient(feq, kx, ky, axis=(-2, -1)))
 
-    integrand = 1 / (2 * np.pi) **2 * f * (Mu * muB + q * O / hbar * (EF - E))
+    integrand = 1 / (2 * np.pi) **2 * f * (Mu + q * O / hbar * (EF - E))
+    integrand /=  muB * 1e12  # convert to Bohr magneton / um^2
 
     integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
     return integral
@@ -168,7 +171,8 @@ def _M_integral_by_parts(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
     - EF: Fermi energy (eV)
 
     Returns:
-    - a length-2 array of magnetization "divided by" electric field
+    - a length-2 array of x/y components of magnetization "divided by" E field
+        in units of (Bohr magneton / m^2) / (V / m)
     '''
     E = splE(kx, ky)
     O = splO(kx, ky)
@@ -178,11 +182,12 @@ def _M_integral_by_parts(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
     O_grad = np.array([splO(kx, ky, dx=1), splO(kx, ky, dy=1)])
     Mu_grad = np.array([splM(kx, ky, dx=1), splM(kx, ky, dy=1)])
 
-    prefactor = - q * tau / hbar / (2 * np.pi) ** 2 * feq
-    integrand = prefactor * (Mu_grad * muB \
-                     + q / hbar * O_grad * (EF - E) \
+    # note prefactor hbar is in J * s
+    prefactor = - q * tau / hbar_J / (2 * np.pi) ** 2 * feq
+    integrand = prefactor * (Mu_grad  \
+                     + q / hbar * O_grad * (EF - E)\
                      - q / hbar * O * E_grad
-    )
+    ) / muB / 1e12  # convert to Bohr magneton / um^2
 
     integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
 
@@ -196,7 +201,7 @@ def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
     total magnetization.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - kx, ky: Nkx, Nky arrays /of kx, ky points
     - feq: N(=4) x Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
         / magnetic moment) in each band
@@ -208,6 +213,7 @@ def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
 
     Returns:
     - a length-2 array of x/y components of magnetization "divided by" E field
+        in units of (Bohr magneton / um^2) / (V / m)
     '''
     N = feq.shape[0]
     M_no_dot_E = np.empty((N, 2))  # second dim is two components of integrand
@@ -238,7 +244,7 @@ def M_valley(kx, ky, feq, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
     - EF: Fermi energy (eV)
 
     Returns:
-    - 2D orbital magnetization (Ampere)
+    - 2D orbital magnetization (Bohr magneton per micron^2)
     '''
     return _M_bands(kx, ky, feq, splE, splO, splM, tau=tau, EF=EF).dot(Efield)
 

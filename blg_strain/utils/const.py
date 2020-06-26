@@ -1,8 +1,9 @@
 import numpy as np
 
 # Physical parameters
-hbar = 6.5821e-16 # eV * s
 q = 1.602176634e-19 # Coulomb, electron charge (also eV to J conversion)
+hbar = 6.5821e-16 # eV * s
+hbar_J = hbar * q  # J * s
 m_e = 9.1093837015e-31 / q # kg divide by electron charge to take care of a J-> eV conversion
 muB = q * hbar / (2 * m_e) # Bohr magneton J/T = A*m^2 (hbar/m takes care of J->eV conversion)
 kB = 8.617333262145e-5 # Boltzmann constant eV/K
@@ -18,8 +19,8 @@ nu = 0.165  # Poisson ratio for graphene (in general this should be that of the 
 # Hopping parameters (eV)
 gamma0 = 3.161
 gamma1 = 0.381
-gamma3 = 0.38 
-gamma4 = 0.14 * 0
+gamma3 = 0.38
+gamma4 = 0.14
 dab = 0.022 * 0 # dimer asymmetry
 
 # Fermi velocities m * eV / (eV * s) = m/s
