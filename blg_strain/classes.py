@@ -60,7 +60,9 @@ class BandStructure:
         '''
         kwargs passed to get_bands
         '''
-        self.kwargs = kwargs
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
+
         self.K = Valley(xi=1, **kwargs)
         self.Kp = Valley(xi=-1, **kwargs)
 
@@ -80,6 +82,35 @@ class BandStructure:
         '''
         self.K._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
         self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
+
+
+    @classmethod
+    def load(cls, filename):
+        '''
+        Returns a BandStructure class object with parameters loaded from the
+        .npz file at location `filename`.
+        '''
+        obj = cls()  # inizialize class object
+
+        data = np.load(filename, allow_pickle=True)
+
+        # Set saved variables as attributes to the class object
+        for attr in data.files:
+            setattr(obj, attr, data[attr].item())
+
+        return obj
+
+
+    def save(self, filename):
+        '''
+        Saves data to a compressed .npz file
+
+        filename: full path of destination file
+        '''
+        if filename[-4:] != '.npz':
+            filename += '.npz'
+
+        np.savez_compressed(filename, **self.__dict__)
 
 
     def set_default_valley(self, valley):
