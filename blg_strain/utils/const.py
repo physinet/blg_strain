@@ -20,7 +20,7 @@ nu = 0.165  # Poisson ratio for graphene (in general this should be that of the 
 gamma0 = 3.161
 gamma1 = 0.381
 gamma3 = 0.38
-gamma4 = 0.14
+gamma4 = 0.14 * 0
 dab = 0.022 * 0 # dimer asymmetry
 
 # Fermi velocities m * eV / (eV * s) = m/s

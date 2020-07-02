@@ -21,7 +21,7 @@ def n_valley_layer(kx, ky, feq, Psi, layer=1):
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenstates for a given valley
     - layer: layer number (1 or 2)
     '''
-    assert feq.shape[0] == 4, 'Layer density needs 4x4 eigenstates'
+    assert feq.shape[0] == 4, 'Need 4x4 Hamiltonian to compute density by layer'
     assert layer in [1, 2]
 
     # The occupation should be zero at the edges of the window defined by kx,
@@ -105,7 +105,7 @@ def disp_field(Delta, nt, nb):
     Returns the electric displacement field D/epsilon0 across bilayer graphene
     corresponding to an interlayer asymmetry Delta and carrier density on each
     layer nt and nb. We divide by the vacuum permittivity epsilon0 and return
-    the displacement field in units of electric field (mV/nm)
+    the displacement field in units of electric field (V/m)
 
     Parameters:
     - Delta: interlayer asymmetry (eV)
@@ -116,7 +116,7 @@ def disp_field(Delta, nt, nb):
     '''
     D = Delta / d - q / eps0 * (nt - nb)  # note Delta in eV,
                                           # so we leave out e in denominator
-    return D / 1e6  # V/m -> mV/nm
+    return D  # V/m
 
 
 def _M_integral(kx, ky, feq, splE, splO, splM, tau=0, EF=0):

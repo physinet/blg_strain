@@ -2,9 +2,10 @@ import numpy as np
 
 from .bands import get_bands
 from .berry import berry_mu
-from .macroscopic import ntot_func, _M_bands
+from .macroscopic import _M_bands, n_valley_layer, disp_field
 from .microscopic import feq_func
 from .utils.utils import get_splines, densify
+from .utils.const import gamma4, dab
 
 class Valley:
     '''
@@ -40,11 +41,13 @@ class Valley:
             xi=self.xi, H_gradient=H_gradient)
 
         # Calculate spline interpolations and dense grid
-        self.splE, self.splO, self.splM = \
-            get_splines(self._kx, self._ky, self._E, self._Omega, self._Mu)
-        self.kx, self.ky, self.E, self.Omega, self.Mu = \
-            densify(self._kx, self._ky, self.splE, self.splO, self.splM, \
-                Nkx_new=Nkx_new, Nky_new=Nky_new)
+        self.splE, splPr, splPi, self.splO, self.splM = \
+            get_splines(self._kx, self._ky, self._E, self._Psi.real,
+                self._Psi.imag, self._Omega, self._Mu)
+        self.kx, self.ky, self.E, Pr, Pi, self.Omega, self.Mu = \
+            densify(self._kx, self._ky, self.splE, splPr, splPi, self.splO,
+                self.splM, Nkx_new=Nkx_new, Nky_new=Nky_new)
+        self.Psi = Pr + 1j * Pi
         self.Kx, self.Ky = np.meshgrid(self.kx, self.ky, indexing='ij')
 
 
@@ -66,6 +69,9 @@ class BandStructure:
         self.K = Valley(xi=1, **kwargs)
         self.Kp = Valley(xi=-1, **kwargs)
 
+        # Parameters that we may alter
+        self.gamma4 = gamma4
+        self.dab = dab
 
     def __getattr__(self, attr):
         '''
@@ -82,6 +88,28 @@ class BandStructure:
         '''
         self.K._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
         self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
+
+
+    def get_nD(self):
+        '''
+        Calculates the total carrier density and displacement field (parameters
+        that can be tuned experimentally). This requires calculating the carrier
+        density for each valley/layer combination. These quantities are stored,
+        for example, in `BandStructure.K.n1` for the density on layer 1 in
+        valley K. The carrier density and displacement field are stored in
+        `BandStructure.n` (units m^-2) and `BandStructure.D` (units V / m).
+        '''
+        if not hasattr(self.K, 'feq'):
+            raise Exception('Calculate feq using `get_feq` first!')
+
+        for v in (self.K, self.Kp):
+            for i in [1,2]:
+                setattr(v, 'n%i' %i, n_valley_layer(v.kx, v.ky, v.feq, v.Psi,
+                    layer=i))
+
+        self.n = self.K.n1 + self.K.n2 + self.Kp.n1 + self.Kp.n2
+        self.D = disp_field(self.Delta, self.K.n1 + self.Kp.n1,
+            self.K.n2 + self.Kp.n2)
 
 
     def get_feq(self, EF, T=0):
@@ -108,7 +136,7 @@ class BandStructure:
             raise Exception('Calculate M_over_E using `get_M_over_E first!`')
 
         return self.M_over_E.dot(Efield)
-        
+
 
     def get_M_over_E(self, tau=1e-12):
         '''
