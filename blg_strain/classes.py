@@ -6,9 +6,9 @@ from .macroscopic import ntot_func, M_valley
 from .microscopic import feq_func
 from .utils.utils import get_splines, densify
 
-class BandStructure:
+class Valley:
     '''
-    Class to contain results of calculations involving only the Hamiltonian
+    Class to contain results of calculations for one valley
     '''
     def __init__(self, xi=1, **kwargs):
         '''
@@ -20,7 +20,7 @@ class BandStructure:
 
         self.kwargs = kwargs
 
-    def calculate(self, Nkx_new=2000, Nky_new=2000):
+    def _calculate(self, Nkx_new=2000, Nky_new=2000):
         '''
         Nkx_new, Nky_new passed to densify - the final density of the grid
 
@@ -48,23 +48,45 @@ class BandStructure:
         self.Kx, self.Ky = np.meshgrid(self.kx, self.ky, indexing='ij')
 
 
-class BothValleys:
+class BandStructure:
     '''
-    Class to contain results of calculations involving variable Fermi energy
+    Class to contain band structure. Quantities for each valley are stored in
+    the variables `BandStructure.K` and `BandStructure.Kp`.
     '''
-    def __init__(self, bs1, bs2, EF=0, T=0):
+    _default_valley='K'  # can access the calculated quantities for this valley
+                         # (e.g. Omega) by simply writing `BandStructure.Omega`
+
+    def __init__(self, **kwargs):
         '''
-        bs1, bs2: BandStructure objects for K and K' valley
+        kwargs passed to get_bands
         '''
-        self.bs1, self.bs2, self.EF, self.T = bs1, bs2, EF, T
+        self.kwargs = kwargs
+        self.K = Valley(xi=1, **kwargs)
+        self.Kp = Valley(xi=-1, **kwargs)
 
-    def get_f(self):
-        self.feq1 = feq_func(self.bs1.E, self.EF, self.T)
-        self.feq2 = feq_func(self.bs2.E, self.EF, self.T)
 
-    def get_n(self):
-        self.n = ntot_func(self.bs1.kx, self.bs1.ky, self.feq1, self.feq2)
+    def __getattr__(self, attr):
+        '''
+        Attempts to get attributes from `self.K` or `self.Kp`
+        '''
+        return getattr(getattr(self, self._default_valley), attr)
 
-    def get_M(self):
-        self.M1 = M_valley(self.bs1.kx, self.bs1.ky, self.feq1, self.bs1.splE,
-            self.bs1.splO, self.bs1.splM, Efield=[1,0], tau=1, EF=self.EF)
+
+    def calculate(self, Nkx_new=2000, Nky_new=2000):
+        '''
+        Nkx_new, Nky_new passed to densify - the final density of the grid
+
+        Perform calculations for both valleys and interpolate to dense grid
+        '''
+        self.K._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
+        self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
+
+
+    def set_default_valley(self, valley):
+        '''
+        valley: either 'K' or 'Kp' to indicate which valley's variables (e.g.
+        Omega) should be accessed with `BandStructure.Omega` (for example)
+        '''
+
+        assert valley in ['K', 'Kp'], 'Valley must be either \'K\' or \'Kp\''
+        self._default_valley = valley
