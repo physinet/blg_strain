@@ -216,7 +216,7 @@ def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
         in units of (Bohr magneton / um^2) / (V / m)
     '''
     N = feq.shape[0]
-    M_no_dot_E = np.empty((N, 2))  # second dim is two components of integrand
+    M_no_dot_E = np.zeros((N, 2))  # second dim is two components of integrand
 
     if byparts:
         integral = _M_integral_by_parts
@@ -224,29 +224,13 @@ def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
         integral = _M_integral
 
     for i in range(N):
+        if (np.abs(feq[i]).max() < 1e-4):  # Band unoccupied!
+            continue  # Don't bother calculating the magnetization - it is zero.
+
         M_no_dot_E[i] = integral(kx, ky, feq[i], splE[i], splO[i], splM[i],
                             tau=tau, EF=EF)
 
     return M_no_dot_E.sum(axis=0)  # sum over bands
-
-
-def M_valley(kx, ky, feq, splE, splO, splM, Efield=[0,0], tau=0, EF=0):
-    '''
-    Integrates over k space to get orbital magnetization for one valley.
-
-    Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
-    - feq: N(=4) x Nkx x Nky array of equilibrium occupation
-    - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
-        / magnetic moment) in each band
-    - Efield: length-2 array of electric field x/y components (V/m)
-    - tau: scattering time (s). In general an Nkx x Nky array.
-    - EF: Fermi energy (eV)
-
-    Returns:
-    - 2D orbital magnetization (Bohr magneton per micron^2)
-    '''
-    return _M_bands(kx, ky, feq, splE, splO, splM, tau=tau, EF=EF).dot(Efield)
 
 
 def D_valley(kx, ky, f, splO):

@@ -2,7 +2,7 @@ import numpy as np
 
 from .bands import get_bands
 from .berry import berry_mu
-from .macroscopic import ntot_func, M_valley
+from .macroscopic import ntot_func, _M_bands
 from .microscopic import feq_func
 from .utils.utils import get_splines, densify
 
@@ -82,6 +82,51 @@ class BandStructure:
         '''
         self.K._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
         self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
+
+
+    def get_feq(self, EF, T=0):
+        '''
+        Calculates the equilibrium Fermi occupation function for both valleys
+        and stores results under (e.g.) `BandStructure.K.feq`
+
+        EF: Fermi energy (eV)
+        T: temperature (K)
+        '''
+        for valley in (self.K, self.Kp):
+            setattr(valley, 'EF', EF)
+            setattr(valley, 'T', T)
+            setattr(valley, 'feq', feq_func(valley.E, EF, T))
+
+
+    def get_M(self, Efield = [0,0]):
+        '''
+        Computes the dot product of `M_over_E` with an electric field provided
+        as a length-2 array of x and y components (in V / m). Returns
+        magnetization in Bohr magneton / um^2.
+        '''
+        if not hasattr(self, 'M_over_E'):
+            raise Exception('Calculate M_over_E using `get_M_over_E first!`')
+
+        return self.M_over_E.dot(Efield)
+        
+
+    def get_M_over_E(self, tau=1e-12):
+        '''
+        Calculates the net magnetization summing contributions from both
+        valleys. This quantity, when dotted with an electric field (in V/m)
+        gives the orbital magnetization in Bohr magneton / um^2
+
+        tau: relaxation time (seconds). Default: 1 picosecond
+        '''
+        if not hasattr(self.K, 'feq'):
+            raise Exception('Calculate feq using `get_feq` first!')
+
+        self.M_over_E = 0
+        for v in (self.K, self.Kp):
+            self.M_over_E += _M_bands(v.kx, v.ky, v.feq, v.splE, v.splO, v.splM,
+                tau=tau, EF=v.EF, byparts=True)
+
+        return self.M_over_E
 
 
     @classmethod

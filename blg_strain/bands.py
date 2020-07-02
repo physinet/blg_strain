@@ -94,9 +94,6 @@ def _get_bands(Kx, Ky, xi=1, eigh=True, ham='4x4', **params):
         E, Psi = sort_eigen(E, Psi)
         E = E.real
 
-
-
-
     # Finally, transpose first 2 dimensions to put the eigenvectors in the rows
     Psi = Psi.transpose((1,0,2,3))
 
