@@ -1,17 +1,18 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-def plot_bands_3d(Kx, Ky, M, which=[0,1,2,3], cmap='bwr'):
+def plot_bands_3d(Kx, Ky, M, which=[0,1,2,3], cmap='bwr', **kwargs):
     '''
     Makes a 3d plot of the values of M in each of the four bands.
 
     which: which bands to plot
+    kwargs passed to Axes3D.plot_surface
     '''
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     for n in which:
-        ax.plot_surface(Kx, Ky, M[n], cmap=cmap)
+        ax.plot_surface(Kx, Ky, M[n], **kwargs)
 
     return fig, ax
 

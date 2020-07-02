@@ -30,11 +30,11 @@ class BandStructure:
         self._kx, self._ky, self._Kx, self._Ky, self._E, self._Psi = \
             get_bands(xi=self.xi, **self.kwargs)
 
+        H_gradient=None
         if 'ham' in self.kwargs:
-            H_gradient = np.gradient(self.kwargs['ham'], self._kx, self._ky, \
-                axis=(-2,-1))
-        else:
-            H_gradient=None
+            if self.kwargs['ham'] not in ['2x2', '4x4']:
+                H_gradient = np.gradient(self.kwargs['ham'], self._kx, \
+                    self._ky, axis=(-2,-1))
 
         self._Omega, self._Mu = berry_mu(self._Kx, self._Ky, self._E, self._Psi,
             xi=self.xi, H_gradient=H_gradient)
