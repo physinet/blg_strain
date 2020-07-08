@@ -111,6 +111,8 @@ class BandStructure:
         self.D = disp_field(self.Delta, self.K.n1 + self.Kp.n1,
             self.K.n2 + self.Kp.n2)
 
+        return self.n, self.D
+
 
     def get_feq(self, EF, T=0):
         '''
