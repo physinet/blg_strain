@@ -112,7 +112,7 @@ def disp_field(Delta, nt, nb):
     - nt (nb): carrier density on top (bottom) layer (m^-2)
 
     Returns:
-    - D: electric displacement field (?)
+    - D: electric displacement field (V/m)
     '''
     D = Delta / d - q / eps0 * (nt - nb)  # note Delta in eV,
                                           # so we leave out e in denominator

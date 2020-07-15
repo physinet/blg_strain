@@ -8,6 +8,7 @@ m_e = 9.1093837015e-31 / q # kg divide by electron charge to take care of a J-> 
 muB = q * hbar / (2 * m_e) # Bohr magneton J/T = A*m^2 (hbar/m takes care of J->eV conversion)
 kB = 8.617333262145e-5 # Boltzmann constant eV/K
 eps0 = 8.8541878128e-12 # vacuum permittivity C/V*m
+mu0 = 4 * np.pi * 1e-7 # vacuum permeability N/A^2
 
 # Graphene
 a = 0.246e-9 # meters, lattice constant for graphene
