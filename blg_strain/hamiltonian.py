@@ -1,7 +1,6 @@
 import numpy as np
-from .utils.const import nu, eta0, eta3, eta4, etan, \
-                         gamma0, gamma1, gamma3, gamma4, gamman, \
-                         DeltaAB, hbar, deltas, deltans
+from .utils.const import nu, eta0, eta3, eta4, etan, hbar, deltas, deltans
+from .utils import const as c  # for accessing parameters we can turn on/off
 from .utils.lattice import strain_tensor
 
 
@@ -18,7 +17,6 @@ def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     Returns:
     - H: Hamiltonian array shape 4 x 4 x Nkx x Nky
     '''
-
     # K vector
     Ka = np.stack([Kxa, Kya], axis=-1)
 
@@ -33,7 +31,7 @@ def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     deltans_p = [(I+strain).dot(deltan) for deltan in deltans]
 
     # Nearest-neighbor matrix elements
-    gammas = [gamma0, gamma3, gamma4]
+    gammas = [c.gamma0, c.gamma3, c.gamma4]
     etas = [eta0, eta3, eta4]
     Hs = np.array([o, o, o])
     for delta, delta_p in zip(deltas, deltas_p):
@@ -45,14 +43,14 @@ def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     # Next-nearest neighbor matrix element
     Hn = o
     for delta, delta_p in zip(deltans, deltans_p):
-        gamma_p = gamman * (1 + etan * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
+        gamma_p = c.gamman * (1 + etan * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
         Hn += gamma_p * np.exp(1j * Ka.dot(delta_p))
 
     H = np.array([
         [-Delta / 2 + Hn, H3, -H4.conj(), H0.conj()],
         [H3.conj(), Delta/2 + Hn, H0, -H4],
-        [-H4, H0.conj(), Delta/2 + Hn + DeltaAB, gamma1 + o],
-        [H0, -H4.conj(), gamma1 + o, -Delta/2 + Hn + DeltaAB]
+        [-H4, H0.conj(), Delta/2 + Hn + c.DeltaAB, c.gamma1 + o],
+        [H0, -H4.conj(), c.gamma1 + o, -Delta/2 + Hn + c.DeltaAB]
     ]) # Adding "o" to gamma1 and Hn to Delta/2 gives elements proper shape
 
     return H
@@ -85,7 +83,7 @@ def dH_4by4(Kxa, Kya, eps=0, theta=0):
     deltans_p = [(I+strain).dot(deltan) for deltan in deltans]
 
     # Nearest neighbor elements
-    gammas = [gamma0, gamma3, gamma4]
+    gammas = [c.gamma0, c.gamma3, c.gamma4]
     etas = [eta0, eta3, eta4]
     dHdxs = np.array([o, o, o])
     dHdys = np.array([o, o, o])
@@ -102,7 +100,7 @@ def dH_4by4(Kxa, Kya, eps=0, theta=0):
     dHndx = o
     dHndy = o
     for delta, delta_p in zip(deltans, deltans_p):
-        gamma_p = gamman * (1 + etan \
+        gamma_p = c.gamman * (1 + etan \
             * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
         dHndx += gamma_p * np.exp(1j * Ka.dot(delta_p)) * 1j * delta_p[0]
         dHndy += gamma_p * np.exp(1j * Ka.dot(delta_p)) * 1j * delta_p[1]

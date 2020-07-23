@@ -48,6 +48,7 @@ class Valley:
             densify(self._kx, self._ky, self.splE, splPr, splPi, self.splO,
                 self.splM, Nkx_new=Nkx_new, Nky_new=Nky_new)
         self.Psi = Pr + 1j * Pi
+        # Meshgrid using ij indexing for compatibility with RectBivariateSpline
         self.Kx, self.Ky = np.meshgrid(self.kx, self.ky, indexing='ij')
 
 

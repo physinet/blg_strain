@@ -19,12 +19,30 @@ K = 4 * np.pi / (3 * np.sqrt(3))  # kx coordinate of K valley (no strain)
 nu = 0.165  # Poisson ratio for graphene (in general this should be that of the substrate)
 
 # Hopping parameters (eV)
-gamma0 = 3.161
-gamma1 = 0.381
-gamma3 = 0.38
-gamma4 = 0.14 * 0
-gamman = 0.1 * gamma0
-DeltaAB = 0.022 * 0 # dimer asymmetry
+def set_parameters(turn_off=[]):
+    '''
+    Toggles parameters on and off. This is useful for temporarily ignoring the
+    effects of the smaller hopping parameters, for example
+    List of parameters affected by this function:
+        gamma0, gamma1, gamma3, gamma4, gamman, DeltaAB
+
+    Parameters:
+    turn_off: a list of parameter variable names to set to zero. All other
+        parameters in the above list will be restored to their default values.
+    '''
+    global gamma0, gamma1, gamma3, gamma4, gamman, DeltaAB
+    gamma0 = 3.161
+    gamma1 = 0.381
+    gamma3 = 0.38
+    gamma4 = 0.14
+    gamman = 0.1 * gamma0
+    DeltaAB = 0.022  # dimer asymmetry
+    for param in turn_off:
+        exec(param+'=0', globals())  # set parameter to zero - global variable!
+
+
+
+set_parameters()
 
 # Estimated Gruneisen parameters
 eta0 = -2
