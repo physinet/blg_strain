@@ -11,10 +11,11 @@ eps0 = 8.8541878128e-12 # vacuum permittivity C/V*m
 mu0 = 4 * np.pi * 1e-7 # vacuum permeability N/A^2
 
 # Graphene
+a0 = 0.142e-9 # meters, C-C bond length - careful not to confuse for lattice const!
 a = 0.246e-9 # meters, lattice constant for graphene
 d = 0.34e-9 # meters, interlayer distance for BLG
 A_BZ = 2 * np.sqrt(3) * (np.pi / a) ** 2  # area of Brillouin zone, m^-2
-
+K = 4 * np.pi / (3 * np.sqrt(3))  # kx coordinate of K valley (no strain)
 nu = 0.165  # Poisson ratio for graphene (in general this should be that of the substrate)
 
 # Hopping parameters (eV)
@@ -22,22 +23,28 @@ gamma0 = 3.161
 gamma1 = 0.381
 gamma3 = 0.38
 gamma4 = 0.14 * 0
-dab = 0.022 * 0 # dimer asymmetry
-
-# Fermi velocities m * eV / (eV * s) = m/s
-v0 = np.sqrt(3) * a * gamma0 / (2 * hbar)
-v3 = np.sqrt(3) * a * gamma3 / (2 * hbar)
-v4 = np.sqrt(3) * a * gamma4 / (2 * hbar)
-
-# Effective mass for 2x2 Hamiltonian
-meff = gamma1 / (2 * v0 ** 2)
-
-# Lifshitz transition
-kL = meff * v3 / hbar  # m^-1
-EL = hbar * kL * v3 / 2  # eV
+gamman = 0.1 * gamma0
+DeltaAB = 0.022 * 0 # dimer asymmetry
 
 # Estimated Gruneisen parameters
-# eta0 = -2
-eta0 = -3  # less consistent with experiments but matches theory papers
+eta0 = -2
+# eta0 = -3  # less consistent with experiments but matches theory papers
 eta3 = -1
 eta4 = -1
+etan = -1
+
+# Hopping bonds
+# Nearest neighbor
+delta1 = np.array([0, 1])
+delta2 = np.array([np.sqrt(3)/2, -1/2])
+delta3 = np.array([-np.sqrt(3)/2, -1/2])
+deltas = [delta1, delta2, delta3]
+
+# Next-nearest neighbor
+deltan1 = np.array([np.sqrt(3), 0])
+deltan2 = np.array([-np.sqrt(3), 0])
+deltan3 = np.array([np.sqrt(3)/2, 3/2])
+deltan4 = np.array([np.sqrt(3)/2, -3/2])
+deltan5 = np.array([-np.sqrt(3)/2, 3/2])
+deltan6 = np.array([-np.sqrt(3)/2, -3/2])
+deltans = [deltan1, deltan2, deltan3, deltan4, deltan5, deltan6]

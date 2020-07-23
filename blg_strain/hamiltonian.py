@@ -1,168 +1,123 @@
 import numpy as np
-from .utils.const import nu, eta0, eta3, eta4, \
-                         gamma0, gamma1, gamma3, gamma4, \
-                         dab, v0, v3, v4, hbar, meff
-from .utils.params import w
+from .utils.const import nu, eta0, eta3, eta4, etan, \
+                         gamma0, gamma1, gamma3, gamma4, gamman, \
+                         DeltaAB, hbar, deltas, deltans
 
 
-def H_4by4(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
+def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     '''
     Calculates the 4x4 low-energy Hamiltonian for uniaxially strained BLG.
 
     Parameters:
-    - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
-    - xi: valley index (+1 for K, -1 for K')
+    - Kxa, Kya: Nkx x Nky array of wave vectors
     - Delta: interlayer asymmetry (eV)
-    - delta: uniaxial strain
+    - eps: uniaxial strain
     - theta: angle of uniaxial strain to zigzag axis
 
     Returns:
     - H: Hamiltonian array shape 4 x 4 x Nkx x Nky
     '''
+    # K vector
+    Ka = np.stack([Kxa, Kya], axis=-1)
 
-    # Array to give proper shape to constants
-    o = np.ones_like(Kx)
-    Deltao = Delta * o
-    dabo = dab * o
-    gamma1o = gamma1 * o
+    o = np.zeros_like(Kxa, dtype='complex128') # Array to give  shape to const
+    I = np.eye(2) # 2x2 identity matrix
 
-    # Gauge fields
-    w3 = w(delta, idx=3, xi=xi, theta=theta) * o
-    w4 = w(delta, idx=4, xi=xi, theta=theta) * o
+    # strain tensor
+    strain = eps * np.array([
+        [np.cos(theta)**2 - nu * np.sin(theta)**2, (1+nu)*np.cos(theta)*np.sin(theta)],
+        [(1+nu)*np.cos(theta)*np.sin(theta), np.sin(theta)**2 - nu * np.cos(theta)**2]
+    ])
 
-    w3s = w3.conjugate()
-    w4s = w4.conjugate()
+    # Transform bonds under strain
+    deltas_p = [(I+strain).dot(delta) for delta in deltas]
+    deltans_p = [(I+strain).dot(deltan) for deltan in deltans]
 
-    # Momentum
-    px, py = hbar * Kx, hbar * Ky
-    pi = xi * px + 1j * py
-    pidag = xi * px - 1j * py
+    # Nearest-neighbor matrix elements
+    gammas = [gamma0, gamma3, gamma4]
+    etas = [eta0, eta3, eta4]
+    Hs = np.array([o, o, o])
+    for delta, delta_p in zip(deltas, deltas_p):
+        for i in range(3):
+            gamma_p = gammas[i] * (1 + etas[i] * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
+            Hs[i] += gamma_p * np.exp(1j * Ka.dot(delta_p))
+    H0, H3, H4 = Hs
+
+    # Next-nearest neighbor matrix element
+    Hn = o
+    for delta, delta_p in zip(deltans, deltans_p):
+        gamma_p = gamman * (1 + etan * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
+        Hn += gamma_p * np.exp(1j * Ka.dot(delta_p))
 
     H = np.array([
-        [-1/2 * Deltao, v3 * pi + w3, -v4 * pidag - w4s, v0*pidag],
-        [v3 * pidag + w3s,  1/2 * Deltao, v0 * pi, -v4 * pi - w4],
-        [-v4 * pi - w4, v0 * pidag, 1/2 * Deltao + dabo, gamma1o],
-        [v0 * pi, -v4 * pidag - w4s, gamma1o, -1/2 * Deltao + dabo]
-    ])
+        [-Delta / 2 + Hn, H3, -H4.conj(), H0.conj()],
+        [H3.conj(), Delta/2 + Hn, H0, -H4],
+        [-H4, H0.conj(), Delta/2 + Hn + DeltaAB, gamma1 + o],
+        [H0, -H4.conj(), gamma1 + o, -Delta/2 + Hn + DeltaAB]
+    ]) # Adding "o" to gamma1 and Hn to Delta/2 gives elements proper shape
 
     return H
 
 
-def H_dkx(xi=1):
+def dH_4by4(Kxa, Kya, eps=0, theta=0):
     '''
-    Returns the 4x4 derivative (w.r.t. kx) of the Hamiltonian
-    Units are eV * m
+    Returns the derivative (w.r.t. kx*a) of the 4 x 4 Hamiltonian
+    Units are eV
 
     Parameters
-    - xi: valley index (+1 for K, -1 for K')
-    '''
-    return xi * hbar * np.array([
-        [0, v3, -v4, v0],
-        [v3, 0, v0, -v4],
-        [-v4, v0, 0, 0],
-        [v0, -v4, 0, 0]
-    ])
-
-
-def H_dky(xi=1):
-    '''
-    Returns the 4x4 derivative (w.r.t. ky) of the Hamiltonian
-    Units are eV * m
-
-    Parameters
-    - xi: valley index (unused)
-    '''
-    return 1j * hbar * np.array([
-        [0, v3, v4, -v0],
-        [-v3, 0, v0, -v4],
-        [-v4, -v0, 0, 0],
-        [v0, v4, 0, 0]
-    ])
-
-
-def H_2by2(Kx, Ky, xi=1, Delta=0, delta=0, theta=0):
-    '''
-    Calculates the 2x2 low-energy Hamiltonian for uniaxially strained BLG.
-
-    Parameters:
-    - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
-    - xi: valley index (+1 for K, -1 for K')
-    - Delta: interlayer asymmetry (eV)
-    - delta: uniaxial strain
+    - Kxa, Kya: Nkx x Nky array of wave vectors
+    - eps: uniaxial strain
     - theta: angle of uniaxial strain to zigzag axis
 
     Returns:
-    - H: Hamiltonian array shape 2 x 2 x Nkx x Nky
+    H_dkx, H_dky: derivatives of H, shape 4 x 4 x Nkx x Nky
     '''
-    # Array to give proper shape to constants
-    o = np.ones_like(Kx)
-    Deltao = Delta * o
+    # K vector
+    Ka = np.stack([Kxa, Kya], axis=-1)
 
-    # Gauge fields
-    w3 = w(delta, idx=3, xi=xi, theta=0) * o
-    w3s = w3.conjugate()
+    o = np.zeros_like(Kxa, dtype='complex128') # Array to give  shape to const
+    I = np.eye(2) # 2x2 identity matrix
 
-    # Momentum
-    px, py = hbar * Kx, hbar * Ky
-    pi = xi * px + 1j * py  # note: no xi!
-    pidag = xi * px - 1j * py
-
-    # Moulsdale with added trigonal warping terms.
-    H = np.array([
-        [-Deltao / 2, -pidag ** 2 / (2 * meff) + v3 * pi + w3],
-        [-pi ** 2 / (2 * meff) + v3 * pidag + w3s, Deltao / 2]
+    # strain tensor
+    strain = eps * np.array([
+        [np.cos(theta)**2 - nu * np.sin(theta)**2, (1+nu)*np.cos(theta)*np.sin(theta)],
+        [(1+nu)*np.cos(theta)*np.sin(theta), np.sin(theta)**2 - nu * np.cos(theta)**2]
     ])
 
-    # Battilomo
-    # note this is written in a different basis than above (or interlayer
-    # displacement is defined oppositely)
-    # H = np.array([
-    #     [Deltao / 2, -1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3 + 1j/meff * px * py + 1j * xi * v3 * py],
-    #     [-1/(2*meff) * (px ** 2 - py ** 2) + xi * v3 * px  + w3s - 1j/meff * px * py - 1j * xi * v3 * py,   -Deltao / 2]
-    # ])
+    # Transform bonds under strain
+    deltas_p = [(I+strain).dot(delta) for delta in deltas]
+    deltans_p = [(I+strain).dot(deltan) for deltan in deltans]
 
-    return H
+    # Nearest neighbor elements
+    gammas = [gamma0, gamma3, gamma4]
+    etas = [eta0, eta3, eta4]
+    dHdxs = np.array([o, o, o])
+    dHdys = np.array([o, o, o])
+    for delta, delta_p in zip(deltas, deltas_p):
+        for i in range(3):
+            gamma_p = gammas[i] * (1 + etas[i] \
+                * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
+            dHdxs[i] += gamma_p * np.exp(1j * Ka.dot(delta_p)) * 1j * delta_p[0]
+            dHdys[i] += gamma_p * np.exp(1j * Ka.dot(delta_p)) * 1j * delta_p[1]
+    dH0dx, dH3dx, dH4dx = dHdxs
+    dH0dy, dH3dy, dH4dy = dHdys
 
+    # Next-nearest neighbor matrix element
+    dHndx = o
+    dHndy = o
+    for delta, delta_p in zip(deltans, deltans_p):
+        gamma_p = gamman * (1 + etan \
+            * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
+        dHndx += gamma_p * np.exp(1j * Ka.dot(delta_p)) * 1j * delta_p[0]
+        dHndy += gamma_p * np.exp(1j * Ka.dot(delta_p)) * 1j * delta_p[1]
 
-def H2_dkx(Kx, Ky, xi=1):
-    '''
-    Returns the derivative (w.r.t. kx) of the 2x2 Hamiltonian
-    Units are eV * m
-
-    Parameters
-    - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
-    - xi: valley index
-    '''
-    # Momentum
-    px, py = hbar * Kx, hbar * Ky
-    pi = xi *  px + 1j * py
-    pidag = xi * px - 1j * py
-
-    # dH/dkx = (dH/dpi)*(dpi/dkx) + (dH/dpidag)*(dpidag/dkx)
-    #        = (dH/dpi)*xi*hbar + (dH/dpidag)*xi*hbar
-    return np.array([
-        [0 * Kx, -pidag / meff + v3],
-        [-pi / meff + v3,  0 * Kx]
-    ]) * xi * hbar
-
-
-def H2_dky(Kx, Ky, xi=1):
-    '''
-    Returns the derivative (w.r.t. ky) of the 2x2 Hamiltonian
-    Units are eV * m
-
-    Parameters
-    - Kx, Ky: Nkx x Nky array of wave vectors (nm^-1)
-    - xi: valley index
-    '''
-    # Momentum
-    px, py = hbar * Kx, hbar * Ky
-    pi = xi * px + 1j * py
-    pidag = xi * px - 1j * py
-
-    # dH/dky = (dH/dpi)*(dpi/dky) + (dH/dpidag)*(dpidag/dky)
-    #        = (dH/dpi)*i*hbar + (dH/dpidag)*(-i)*hbar
-    return np.array([
-        [0 * Kx, pidag / meff +  v3],
-        [-pi / meff - v3,  0 * Kx]
-    ]) * 1j * hbar
+    gradH = [] # will contain dH/dx, dH/dy
+    for dHn, dH0, dH3, dH4 in zip([dHndx, dHndy], [dH0dx, dH0dy], \
+        [dH3dx, dH3dy], [dH4dx, dH4dy]):
+        gradH.append(np.array([
+            [dHn, dH3, -dH4.conj(), dH0.conj()],
+            [dH3.conj(), dHn, dH0, -dH4],
+            [-dH4, dH0.conj(), dHn, o],
+            [dH0, -dH4.conj(), o, dHn]
+        ]))
+    return gradH
