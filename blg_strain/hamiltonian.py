@@ -2,7 +2,7 @@ import numpy as np
 from .utils.const import nu, eta0, eta3, eta4, etan, \
                          gamma0, gamma1, gamma3, gamma4, gamman, \
                          DeltaAB, hbar, deltas, deltans
-from .utils.params import strain_tensor
+from .utils.lattice import strain_tensor
 
 
 def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
@@ -18,7 +18,7 @@ def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     Returns:
     - H: Hamiltonian array shape 4 x 4 x Nkx x Nky
     '''
-    
+
     # K vector
     Ka = np.stack([Kxa, Kya], axis=-1)
 
