@@ -11,38 +11,20 @@ eps0 = 8.8541878128e-12 # vacuum permittivity C/V*m
 mu0 = 4 * np.pi * 1e-7 # vacuum permeability N/A^2
 
 # Graphene
-a0 = 0.142e-9 # meters, C-C bond length - careful not to confuse for lattice const!
-a = 0.246e-9 # meters, lattice constant for graphene
-d = 0.34e-9 # meters, interlayer distance for BLG
+a0 = 0.142e-9  # meters, C-C bond length - careful not to confuse for lattice const!
+a = np.sqrt(3) * a0  # meters, lattice constant for graphene
+d = 0.34e-9  # meters, interlayer distance for BLG
 A_BZ = 2 * np.sqrt(3) * (np.pi / a) ** 2  # area of Brillouin zone, m^-2
 K = 4 * np.pi / (3 * np.sqrt(3))  # kx coordinate of K valley (no strain)
 nu = 0.165  # Poisson ratio for graphene (in general this should be that of the substrate)
 
 # Hopping parameters (eV)
-def set_parameters(turn_off=[]):
-    '''
-    Toggles parameters on and off. This is useful for temporarily ignoring the
-    effects of the smaller hopping parameters, for example
-    List of parameters affected by this function:
-        gamma0, gamma1, gamma3, gamma4, gamman, DeltaAB
-
-    Parameters:
-    turn_off: a list of parameter variable names to set to zero. All other
-        parameters in the above list will be restored to their default values.
-    '''
-    global gamma0, gamma1, gamma3, gamma4, gamman, DeltaAB
-    gamma0 = 3.161
-    gamma1 = 0.381
-    gamma3 = 0.38
-    gamma4 = 0.14
-    gamman = 0.1 * gamma0
-    DeltaAB = 0.022  # dimer asymmetry
-    for param in turn_off:
-        exec(param+'=0', globals())  # set parameter to zero - global variable!
-
-
-
-set_parameters()
+gamma0 = 3.161
+gamma1 = 0.381
+gamma3 = 0.38
+gamma4 = 0.14
+gamman = 0.1 * gamma0
+DeltaAB = 0.022  # dimer asymmetry
 
 # Estimated Gruneisen parameters
 eta0 = -2
@@ -51,7 +33,7 @@ eta3 = -1
 eta4 = -1
 etan = -1
 
-# Hopping bonds
+# Hopping bonds - in units of the atomic separation a0
 # Nearest neighbor
 delta1 = np.array([0, 1])
 delta2 = np.array([np.sqrt(3)/2, -1/2])

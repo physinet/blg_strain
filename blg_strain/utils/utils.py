@@ -35,7 +35,7 @@ def get_splines(kx, ky, *args):
     spline interpolations for each array in args.
 
     Returns:
-    *splines - unpacked tuple of arrays corresponding to each arg. The shape of
+    * splines - unpacked tuple of arrays corresponding to each arg. The shape of
         each array is equal to arg.shape[:-2]
     '''
     splines = [None] * len(args)
@@ -57,10 +57,10 @@ def get_splines(kx, ky, *args):
         return splines
 
 
-def make_grid(kxlims=[-0.35e9, .35e9], kylims=[-0.35e9, .35e9], Nkx=200,
-                Nky=200):
-    kx = np.linspace(kxlims[0], kxlims[1], Nkx)
-    ky = np.linspace(kylims[0], kylims[1], Nky)
+def make_grid(xlims=[-0.35e9, .35e9], ylims=[-0.35e9, .35e9], Nx=200,
+                Ny=200):
+    kx = np.linspace(xlims[0], xlims[1], Nx)
+    ky = np.linspace(ylims[0], ylims[1], Ny)
 
     Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
 

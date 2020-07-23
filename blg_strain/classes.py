@@ -1,11 +1,16 @@
 import numpy as np
 
+from scipy.interpolate import RectBivariateSpline
+from scipy.optimize import minimize
+
 from .bands import get_bands
 from .berry import berry_mu
 from .macroscopic import _M_bands, n_valley_layer, disp_field
 from .microscopic import feq_func
-from .utils.utils import get_splines, densify
-from .utils.const import gamma4, dab
+from .utils.utils import get_splines, densify, make_grid
+from .utils.const import set_parameters, K, deltas, deltans, nu, eta0, eta3, \
+                         eta4, etan, hbar, gamma0, gamma3, gamma4, gamman
+
 
 class Valley:
     '''
@@ -56,6 +61,17 @@ class BandStructure:
     '''
     Class to contain band structure. Quantities for each valley are stored in
     the variables `BandStructure.K` and `BandStructure.Kp`.
+
+    We first calculate the band structure over the entire Brillouin zone with
+    only hopping parameters gamma0 and gamma1 "turned on". We then find the
+    locations of the K and K' valleys, which have shifted due to strain. These
+    are not located at the high-symmetry points of the Brillouin zone because
+    both the lattice and the hopping parameters change with strain.
+
+    Once we have the locations of the K and K' valleys, we turn all hopping
+    parameters back on and calculate the band structure near the vicinity
+    of the K and K' points.
+
     '''
     _default_valley='K'  # can access the calculated quantities for this valley
                          # (e.g. Omega) by simply writing `BandStructure.Omega`
@@ -65,14 +81,27 @@ class BandStructure:
         kwargs passed to get_bands
         '''
         for key in kwargs:
-            setattr(self, key, kwargs[key])
+            setattr(self, key, kwargs[key]) # for saving
+
+        # Find K and K' points with most hoppings turned off
+        set_parameters(turn_off=['gamma3', 'gamma4', 'gamman', 'DeltaAB'])
+        kwargs2 = kwargs.copy()
+        kwargs2.setdefault('Nkx', 200)  # less dense grid for speedy calculation
+        kwargs2.setdefault('Nky', 200)
+        get_bands(**kwargs)
+
+
+
+        set_parameters()  # turn hoppings back on
 
         self.K = Valley(xi=1, **kwargs)
         self.Kp = Valley(xi=-1, **kwargs)
 
         # Parameters that we may alter
-        self.gamma4 = gamma4
-        self.dab = dab
+        self.gamma3 = c.gamma3
+        self.gamma4 = c.gamma4
+        self.gamman = c.gamman
+        self.DeltaAB = c.DeltaAB
 
     def __getattr__(self, attr):
         '''

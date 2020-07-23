@@ -6,7 +6,7 @@ from .utils.utils import make_grid
 from .utils.const import K
 
 def get_bands(kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K], Nkx=200,
-                Nky=200, Delta=0, eps=0, theta=0, ham='4x4', eigh=False):
+                Nky=200, Delta=0, sl=None, ham='4x4', eigh=False):
     '''
     Calculate energy eigenvalues and eigenvectors for a rectangular window of
     k-space.
@@ -16,8 +16,7 @@ def get_bands(kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K], Nkx=200,
         By default, covers the entire Brillouin zone (with a little extra)
     - Nkx, Nky: number of k points in each dimension
     - Delta: interlayer asymmetry (eV)
-    - eps: uniaxial strain
-    - theta: angle of uniaxial strain to zigzag axis
+    - sl: instance of the StrainedLattice class
     - ham: str or array - Select choice of Hamiltonian with a string
         (choice is only '4x4' for now) or pass precompuuted array consistent
         with the arrays made with `make_grid(kxlims, kylims, Nkx, Nky)`.
@@ -34,8 +33,8 @@ def get_bands(kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K], Nkx=200,
     '''
     kxa, kya, Kxa, Kya = make_grid(kxalims, kyalims, Nkx, Nky)
 
-    E, Psi = _get_bands(Kxa, Kya, Delta=Delta, eps=eps,
-                        theta=theta, ham=ham, eigh=eigh)
+    E, Psi = _get_bands(Kxa, Kya, Delta=Delta, sl=sl, ham=ham,
+                        eigh=eigh)
 
     return kxa, kya, Kxa, Kya, E, Psi
 
@@ -47,7 +46,7 @@ def _get_bands(Kxa, Kya, eigh=True, ham='4x4', **params):
 
     Parameters:
     - Kxa, Kya: Nkx x Nky meshgrid of kx, ky points (using 'ij' indexing)
-    - eigh: if True, use np.linalg.eigh; if False use np.linalg.ei
+    - eigh: if True, use np.linalg.eigh; if False use np.linalg.eig
     - hamiltonian: str or array - Select choice of Hamiltonian with a string
         (only '4x4' for now) or pass array of precomputed Hamiltonian
         with shape N x N x Nkx x Nky.

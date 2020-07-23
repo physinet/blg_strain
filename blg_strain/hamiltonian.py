@@ -1,18 +1,15 @@
 import numpy as np
-from .utils.const import nu, eta0, eta3, eta4, etan, hbar, deltas, deltans
-from .utils import const as c  # for accessing parameters we can turn on/off
-from .utils.lattice import strain_tensor
+from .utils.const import hbar, gamma1
 
 
-def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
+def H_4by4(Kxa, Kya, Delta=0, sl=None):
     '''
     Calculates the 4x4 low-energy Hamiltonian for uniaxially strained BLG.
 
     Parameters:
     - Kxa, Kya: Nkx x Nky array of wave vectors
     - Delta: interlayer asymmetry (eV)
-    - eps: uniaxial strain
-    - theta: angle of uniaxial strain to zigzag axis
+    - sl: instance of the StrainedLattice class
 
     Returns:
     - H: Hamiltonian array shape 4 x 4 x Nkx x Nky
@@ -23,34 +20,26 @@ def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     o = np.zeros_like(Kxa, dtype='complex128') # Array to give  shape to const
     I = np.eye(2) # 2x2 identity matrix
 
-    # strain tensor
-    strain = strain_tensor(eps, theta)
-
-    # Transform bonds under strain
-    deltas_p = [(I+strain).dot(delta) for delta in deltas]
-    deltans_p = [(I+strain).dot(deltan) for deltan in deltans]
-
     # Nearest-neighbor matrix elements
-    gammas = [c.gamma0, c.gamma3, c.gamma4]
-    etas = [eta0, eta3, eta4]
-    Hs = np.array([o, o, o])
-    for delta, delta_p in zip(deltas, deltas_p):
-        for i in range(3):
-            gamma_p = gammas[i] * (1 + etas[i] * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
-            Hs[i] += gamma_p * np.exp(1j * Ka.dot(delta_p))
-    H0, H3, H4 = Hs
+    H0 = o
+    H3 = o
+    H4 = o
+    for (delta, gamma0, gamma3, gamma4) in zip(sl.deltas, sl.gamma0s,
+                                               sl.gamma3s, sl.gamma4s):
+        H0 += gamma0 * np.exp(1j * Ka.dot(delta))
+        H3 += gamma3 * np.exp(1j * Ka.dot(delta))
+        H4 += gamma4 * np.exp(1j * Ka.dot(delta))
 
     # Next-nearest neighbor matrix element
     Hn = o
-    for delta, delta_p in zip(deltans, deltans_p):
-        gamma_p = c.gamman * (1 + etan * np.linalg.norm(delta_p - delta) / np.linalg.norm(delta))
-        Hn += gamma_p * np.exp(1j * Ka.dot(delta_p))
+    for (deltan, gamman) in zip(sl.deltans, sl.gammans):
+        Hn += gamman * np.exp(1j * Ka.dot(deltan))
 
     H = np.array([
         [-Delta / 2 + Hn, H3, -H4.conj(), H0.conj()],
         [H3.conj(), Delta/2 + Hn, H0, -H4],
-        [-H4, H0.conj(), Delta/2 + Hn + c.DeltaAB, c.gamma1 + o],
-        [H0, -H4.conj(), c.gamma1 + o, -Delta/2 + Hn + c.DeltaAB]
+        [-H4, H0.conj(), Delta/2 + Hn + sl.DeltaAB, gamma1 + o],
+        [H0, -H4.conj(), gamma1 + o, -Delta/2 + Hn + sl.DeltaAB]
     ]) # Adding "o" to gamma1 and Hn to Delta/2 gives elements proper shape
 
     return H
