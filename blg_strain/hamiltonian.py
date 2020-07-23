@@ -2,6 +2,7 @@ import numpy as np
 from .utils.const import nu, eta0, eta3, eta4, etan, \
                          gamma0, gamma1, gamma3, gamma4, gamman, \
                          DeltaAB, hbar, deltas, deltans
+from .utils.params import strain_tensor
 
 
 def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
@@ -17,6 +18,7 @@ def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     Returns:
     - H: Hamiltonian array shape 4 x 4 x Nkx x Nky
     '''
+    
     # K vector
     Ka = np.stack([Kxa, Kya], axis=-1)
 
@@ -24,10 +26,7 @@ def H_4by4(Kxa, Kya, Delta=0, eps=0, theta=0):
     I = np.eye(2) # 2x2 identity matrix
 
     # strain tensor
-    strain = eps * np.array([
-        [np.cos(theta)**2 - nu * np.sin(theta)**2, (1+nu)*np.cos(theta)*np.sin(theta)],
-        [(1+nu)*np.cos(theta)*np.sin(theta), np.sin(theta)**2 - nu * np.cos(theta)**2]
-    ])
+    strain = strain_tensor(eps, theta)
 
     # Transform bonds under strain
     deltas_p = [(I+strain).dot(delta) for delta in deltas]
@@ -79,10 +78,7 @@ def dH_4by4(Kxa, Kya, eps=0, theta=0):
     I = np.eye(2) # 2x2 identity matrix
 
     # strain tensor
-    strain = eps * np.array([
-        [np.cos(theta)**2 - nu * np.sin(theta)**2, (1+nu)*np.cos(theta)*np.sin(theta)],
-        [(1+nu)*np.cos(theta)*np.sin(theta), np.sin(theta)**2 - nu * np.cos(theta)**2]
-    ])
+    strain = strain_tensor(eps, theta)
 
     # Transform bonds under strain
     deltas_p = [(I+strain).dot(delta) for delta in deltas]
