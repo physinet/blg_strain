@@ -3,7 +3,7 @@ from numpy import sin, cos
 import itertools
 from scipy.spatial import Voronoi
 
-from .const import nu
+from .const import nu, K
 
 def strain_tensor(eps, theta):
     '''
@@ -36,10 +36,10 @@ def brillouin_zone(strain):
     b1p = 2 * np.pi * np.cross(a2p, z) / np.linalg.norm(np.cross(a1p, a2p))
     b2p = 2 * np.pi * np.cross(z, a1p) / np.linalg.norm(np.cross(a1p, a2p))
 
-    return get_bz_vertices([b1p, b2p])
+    return _get_bz_vertices([b1p, b2p])
 
 
-def get_bz_vertices(recip_vectors):
+def _get_bz_vertices(recip_vectors):
     '''
     Get the vertices of the Brillouin zone given list of reciprocal lattice
     vectors.
@@ -52,3 +52,22 @@ def get_bz_vertices(recip_vectors):
     finite_regions = [r for r in vor.regions if len(r) != 0 and -1 not in r]
     assert len(finite_regions) == 1
     return [vor.vertices[i] for i in finite_regions[0]]
+
+
+def strained_K(strain, Kprime=False):
+    '''
+    Get the location of the K (or K') point of the strained Brillouin zone.
+    Finds the vertex of the strained Brillouin zone that is closest to the
+    location of the original K (or K') point.
+    Parameters:
+    - strain: an arbitrary 2x2 strain tensor
+    - Kprime: if False (True), returns the position of the K (K') point
+    '''
+    bz = np.array(brillouin_zone(strain))  # list to array
+    KK = np.array([K, 0])
+    if Kprime:
+        KK *= -1
+
+    dist2 = ((bz - KK) ** 2).sum(axis=1)  # Dist between K point and bz vertices
+    arg = np.argmin(dist2)
+    return bz[arg]  # closest vertex to K (K')
