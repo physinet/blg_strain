@@ -4,44 +4,6 @@ import numpy as np
 from .utils.const import kB, hbar, m_e
 from scipy.interpolate import RectBivariateSpline
 
-def meff_func(kx, ky, E):
-    '''
-    Calculates effective mass tensor from the curvature of the bands.
-    Specifically, this returns the inverse of the reciprocal effective mass
-    tensor, with components (1/m)_{ij} = 1/hbar^2  (d^2E)/(dk_i dk_j)
-
-    The tensor is in units of the electron mass m_e.
-
-    Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: N(=4) x Nkx x Nky array of energy eigenvalues
-
-    Returns:
-    - meff: N(=4) x Nkx x Nky x 2 x 2 array.
-        The 1st dimension indexes the energy bands
-        The 2nd/3rd dimensions index over ky and kx
-        The 4th/5th dimensions are the 2x2 effective mass tensor
-    '''
-    E_dkx, E_dky = np.gradient(E, kx, ky, axis=(1,2), edge_order=2) # axis1 = y
-                                                                    # axis2 = x
-
-    E_dkx_dkx, E_dkx_dky = np.gradient(E_dkx, kx, ky, axis=(1,2), edge_order=2)
-    E_dky_dkx, E_dky_dky = np.gradient(E_dky, kx, ky, axis=(1,2), edge_order=2)
-
-    if E.shape[0] != 4:
-        raise Exception('Something is wrong... size of E is not 4 x ...')
-
-    oneoverm = np.zeros((E.shape[0], len(kx), len(ky), 2, 2))
-
-    oneoverm[:, :, :, 0, 0] = E_dkx_dkx / hbar**2
-    oneoverm[:, :, :, 0, 1] = E_dky_dkx / hbar**2
-    oneoverm[:, :, :, 1, 0] = E_dkx_dky / hbar**2
-    oneoverm[:, :, :, 1, 1] = E_dky_dky / hbar**2
-
-    # np.linalg.inv will operate over last two axes
-    return np.linalg.inv(oneoverm) / m_e  # m_e definition takes care of eV -> J
-
-
 def feq_func(E, EF, T=0):
     '''
     Fermi-Dirac distribution for calculating electron or hole occupation
@@ -58,29 +20,6 @@ def feq_func(E, EF, T=0):
                               # so they contribute as (-) to carrier density
 
     return f
-
-
-def feq_spline(kx, ky, E, EF, T=0, N=10000):
-    '''
-    Returns a spline interpolation for the Fermi-Dirac distribution. This is
-    useful at low temperature when the derivative of f is sharply peaked.
-
-    Arguments:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
-    - E: Energy (eV) - an array with arbitrary dimensions
-    - EF: Fermi energy (eV)
-    - T: Temperature (K)
-    - N: number of points to use for the interpolation
-    '''
-    spl = RectBivariateSpline(kx, ky, E)
-
-    kxdense = np.linspace(kx.min(), kx.max(), N)
-    kydense = np.linspace(ky.min(), ky.max(), N)
-
-    Edense = spl(kxdense, kydense)
-    fdense = feq_func(Edense, EF, T=T)
-
-    return RectBivariateSpline(kxdense, kydense, fdense)
 
 
 def check_f_boundaries(f, thresh=0.01):

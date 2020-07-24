@@ -2,6 +2,8 @@ import numpy as np
 
 from .hamiltonian import H_4x4
 from .berry import berry_mu
+from .microscopic import feq_func
+from .macroscopic import n_valley_layer, D_field, ME_coef
 from .utils.utils import make_grid, get_splines, densify
 
 from .utils.const import K
@@ -218,6 +220,17 @@ class BandStructure:
         self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
 
 
+    def get_zero_energy(self):
+        '''
+        Calculates a reasonable "zero" energy point. Finds the average of the
+        valence band maximum and conduction band minimum, and then averages
+        this quantity over K and K' valleys.
+        '''
+        zero_K = np.mean([self.K.E[1].max(), self.K.E[2].min()])
+        zero_Kp = np.mean([self.Kp.E[1].max(), self.Kp.E[2].min()])
+        return np.mean([zero_K, zero_Kp])
+
+
     @classmethod
     def load(cls, filename):
         '''
@@ -245,3 +258,68 @@ class BandStructure:
             filename += '.npz'
 
         np.savez_compressed(filename, **self.__dict__)
+
+
+class FilledBands:
+    '''
+    Class to contain information derived from a band structure given a specified
+    Fermi level E_F and temperature T.
+    '''
+    def __init__(self, bs, EF=0, T=0):
+        '''
+        Parameters:
+        - bs: an instance of the `BandStructure` class
+        - EF: Fermi energy relative to the center of the band gap.
+        - T: Temperature (K)
+        '''
+        self.bs = bs
+        self.EF = EF + bs.get_zero_energy()  # relative to center of gap
+        self.T = T
+
+
+    def calculate(self):
+        self.feq_K = feq_func(self.bs.K.E, self.EF, self.T)
+        self.feq_Kp = feq_func(self.bs.Kp.E, self.EF, self.T)
+
+        # Carrier density (m^-2) (contributions from each valley and layer)
+        self.n1 = n_valley_layer(self.bs.K.kxa, self.bs.K.kya, self.feq_K,
+            self.bs.K.Psi, layer=1)
+        self.n2 = n_valley_layer(self.bs.K.kxa, self.bs.K.kya, self.feq_K,
+            self.bs.K.Psi, layer=2)
+        self.n1p = n_valley_layer(self.bs.Kp.kxa, self.bs.Kp.kya, self.feq_Kp,
+            self.bs.Kp.Psi, layer=1)
+        self.n2p = n_valley_layer(self.bs.Kp.kxa, self.bs.Kp.kya, self.feq_Kp,
+            self.bs.Kp.Psi, layer=2)
+
+        # Displacement field (V/m)
+        self.D = D_field(self.bs.Delta, self.n1 + self.n1p, self.n2 + self.n2p)
+
+        # ME coefficient
+        self.alpha = 0
+        for v, f in zip([self.bs.K, self.bs.Kp], [self.feq_K, self.feq_Kp]):
+            self.alpha += ME_coef(v.kxa, v.kya, f, v.splE, v.splO, v.splM,
+                                    self.EF)
+
+
+    def get_nD(self):
+        '''
+        Calculates the total carrier density and displacement field (parameters
+        that can be tuned experimentally). This requires calculating the carrier
+        density for each valley/layer combination. These quantities are stored,
+        for example, in `BandStructure.K.n1` for the density on layer 1 in
+        valley K. The carrier density and displacement field are stored in
+        `BandStructure.n` (units m^-2) and `BandStructure.D` (units V / m).
+        '''
+        if not hasattr(self.K, 'feq'):
+            raise Exception('Calculate feq using `get_feq` first!')
+
+        for v in (self.K, self.Kp):
+            for i in [1,2]:
+                setattr(v, 'n%i' %i, n_valley_layer(v.kx, v.ky, v.feq, v.Psi,
+                    layer=i))
+
+        self.n = self.K.n1 + self.K.n2 + self.Kp.n1 + self.Kp.n2
+        self.D = disp_field(self.Delta, self.K.n1 + self.Kp.n1,
+            self.K.n2 + self.Kp.n2)
+
+        return self.n, self.D

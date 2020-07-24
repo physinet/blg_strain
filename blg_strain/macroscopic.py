@@ -3,9 +3,9 @@ from scipy.integrate import simps
 from scipy.interpolate import RectBivariateSpline
 
 from .microscopic import check_f_boundaries
-from .utils.const import q, hbar, hbar_J, muB, eps0, d
+from .utils.const import q, hbar, hbar_J, muB, mu0, eps0, d, a0
 
-def n_valley_layer(kx, ky, feq, Psi, layer=1):
+def n_valley_layer(kxa, kya, feq, Psi, layer=1):
     '''
     Calculate the contribution to the carrier density on layer 1/2 using the
     band structure for a single valley. This is an integral over the Brillouin
@@ -16,7 +16,7 @@ def n_valley_layer(kx, ky, feq, Psi, layer=1):
     eigenvectors, while layer 2 corresponds to the middle two components.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq: N(=4) x Nkx x Nky array of occupation for a given valley
     - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenstates for a given valley
     - layer: layer number (1 or 2)
@@ -35,44 +35,44 @@ def n_valley_layer(kx, ky, feq, Psi, layer=1):
     else:
         weight = abs(Psi[:, 1, :, :]) ** 2 + abs(Psi[:, 2, :, :]) ** 2
 
-    integrand = (2 * 2 / (2 * np.pi) ** 2) * feq * weight
+    integrand = (2 * 2 / (2 * np.pi * a0) ** 2) * feq * weight
     # The integrand is an N(=4) x Nkx x Nky array
     # the inner simps integrates over ky (the last dimension of integrand)
     # the result of the inner integration is N(=4) x Nkx
     # the outer simps then integrates over kx to give a length N(=4) array
-    integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
+    integral = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
 
     # We now sum over the bands
     return integral.sum()
 
 
-def n_layer(kx, ky, feq1, feq2, Psi1, Psi2, layer=1):
+def n_layer(kxa, kya, feq1, feq2, Psi1, Psi2, layer=1):
     '''
     Calculate the contribution to the carrier density on layer 1/2 considering
     both valleys.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq1, feq2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
     - Psi1, Psi2: N(=4) x N(=4) x Nkx x Nky arrays of eigenstates for K and K'
     - layer: layer number (1 or 2)
     '''
     assert layer in [1, 2]
 
-    n = n_valley_layer(kx, ky, feq1, Psi1, layer=layer) \
-      + n_valley_layer(kx, ky, feq2, Psi2, layer=layer)
+    n = n_valley_layer(kxa, kya, feq1, Psi1, layer=layer) \
+      + n_valley_layer(kxa, kya, feq2, Psi2, layer=layer)
 
     return n
 
 
-def n_valley(kx, ky, feq):
+def n_valley(kxa, kya, feq):
     '''
     Integrates the Fermi-Dirac distribution to calculate the total carrier
     density (in m^-2). This is the contribution from only one of the two valleys
     with energy eigenvalues given in E.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq: N(=4) x Nkx x Nky array of occupation for valley K or K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
@@ -80,27 +80,27 @@ def n_valley(kx, ky, feq):
 
     check_f_boundaries(feq)  # check if f is nearly zero at boundaries of region
 
-    integrand = 2 * 2 / (2 * np.pi) ** 2 * feq
+    integrand = 2 * 2 / (2 * np.pi * a0) ** 2 * feq
 
     # integrate and sum over bands
-    return simps(simps(integrand, ky, axis=-1), kx, axis=-1).sum()
+    return simps(simps(integrand, kya, axis=-1), kxa, axis=-1).sum()
 
 
-def ntot_func(kx, ky, feq1, feq2):
+def ntot_func(kxa, kya, feq1, feq2):
     '''
     Integrates the Fermi-Dirac distribution to calculate the total carrier
     density (in m^-2). This is the sum of contributions from both valleys.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq1, feq2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
     - EF: Fermi energy (eV)
     - T: temperature (K)
     '''
-    return n_valley(kx, ky, feq1) + n_valley(kx, ky, feq2)
+    return n_valley(kxa, kya, feq1) + n_valley(kxa, kya, feq2)
 
 
-def disp_field(Delta, nt, nb):
+def D_field(Delta, nt, nb):
     '''
     Returns the electric displacement field D/epsilon0 across bilayer graphene
     corresponding to an interlayer asymmetry Delta and carrier density on each
@@ -119,93 +119,93 @@ def disp_field(Delta, nt, nb):
     return D  # V/m
 
 
-def _M_integral(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
+def _ME_coef_integral(kxa, kya, feq, splE, splO, splM, EF=0):
     '''
-    Integrates over k space as part of the calculation for orbital magnetization
-    for one valley and one band. Dotted with an applied electric field gives the
-    magnetization for each band.
+    Integrates over k space as part of the calculation for magnetoelectric
+    coefficient for one valley and one band. This quantity is dimensionless
+    and has x and y components. To calculate magnetization, compute the dot
+    product with an electric field vector, multiply by a relaxation time, and
+    divide by the vacuum permeability.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq: Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
         moment) for the given band
-    - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
 
     Returns:
-    - a length-2 array of x/y components of magnetization "divided by" E field
-        in units of (Bohr magneton / m^2) / (V / m)
+    - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
-    E = splE(kx, ky)
-    O = splO(kx, ky)
-    Mu = splM(kx, ky)
+    E = splE(kxa, kya)
+    O = splO(kxa, kya)
+    Mu = splM(kxa, kya)
 
     # non-equilibrium occupation ("divided by" dot product with E field)
-    # equilibrium term will integrate to zero
+    # we exclude equilibrium term that integrates to zero
     # note prefactor hbar is in J * s
-    f = q * tau / hbar_J * np.array(np.gradient(feq, kx, ky, axis=(-2, -1)))
+    f = a0 * q / (hbar_J * mu0) * np.array(np.gradient(feq, kxa, kya,
+                                                        axis=(-2, -1)))
 
-    integrand = 1 / (2 * np.pi) **2 * f * (Mu + q * O / hbar * (EF - E))
-    integrand /=  muB * 1e12  # convert to Bohr magneton / um^2
+    integrand = 1 / (2 * np.pi * a0) **2 * f * (Mu + q * O / hbar * (EF - E))
 
-    integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
+    integral = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
     return integral
 
 
-def _M_integral_by_parts(kx, ky, feq, splE, splO, splM, tau=0, EF=0):
+def _ME_coef_integral_by_parts(kxa, kya, feq, splE, splO, splM, EF=0):
     '''
-    Integrates over k space as part of the calculation for orbital magnetization
-    for one valley and one band. Dotted with an applied electric field gives the
-    magnetization for each band.
+    Integrates over k space as part of the calculation for magnetoelectric
+    coefficient for one valley and one band. This quantity is dimensionless
+    and has x and y components. To calculate magnetization, compute the dot
+    product with an electric field vector, multiply by a relaxation time, and
+    divide by the vacuum permeability.
 
     This is the ''integration by parts'' version in which the derivatives
     are moved to the energy, magnetic moment, and berry curvature terms.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq: Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
         moment) for the given band
-    - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
 
     Returns:
-    - a length-2 array of x/y components of magnetization "divided by" E field
-        in units of (Bohr magneton / m^2) / (V / m)
+    - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
-    E = splE(kx, ky)
-    O = splO(kx, ky)
-    Mu = splM(kx, ky)
+    E = splE(kxa, kya)
+    O = splO(kxa, kya)
+    Mu = splM(kxa, kya)
 
-    E_grad = np.array([splE(kx, ky, dx=1), splE(kx, ky, dy=1)])
-    O_grad = np.array([splO(kx, ky, dx=1), splO(kx, ky, dy=1)])
-    Mu_grad = np.array([splM(kx, ky, dx=1), splM(kx, ky, dy=1)])
+    E_grad = np.array([splE(kxa, kya, dx=1), splE(kxa, kya, dy=1)])
+    O_grad = np.array([splO(kxa, kya, dx=1), splO(kxa, kya, dy=1)])
+    Mu_grad = np.array([splM(kxa, kya, dx=1), splM(kxa, kya, dy=1)])
 
     # note prefactor hbar is in J * s
-    prefactor = - q * tau / hbar_J / (2 * np.pi) ** 2 * feq
+    prefactor = - a0 * q / (hbar_J * mu0) / (2 * np.pi * a0) ** 2 * feq
     integrand = prefactor * (Mu_grad  \
                      + q / hbar * O_grad * (EF - E)\
                      - q / hbar * O * E_grad
-    ) / muB / 1e12  # convert to Bohr magneton / um^2
+    )
 
-    integral = simps(simps(integrand, ky, axis=-1), kx, axis=-1)
+    integral = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
 
     return integral
 
 
-def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
+def ME_coef(kxa, kya, feq, splE, splO, splM, EF=0, byparts=True):
     '''
-    Calculates the integral for orbital magnetization for each of four bands
-    and sums over bands. Dotted with an applied electric field gives the
-    total magnetization.
+    Calculates the integral for ME coefficient for each of four bands and sums
+    over bands. To calculate magnetization, compute the dot product with an
+    electric field vector, multiply by a relaxation time, and divide by the
+    vacuum permeability.
 
     Parameters:
-    - kx, ky: Nkx, Nky arrays /of kx, ky points
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq: N(=4) x Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
         / magnetic moment) in each band
-    - tau: scattering time (s). In general an Nkx x Nky array.
     - EF: Fermi energy (eV)
     - byparts: if True, will use the "integration by parts" version of the
         integral (function `_M_integral_by_parts`). If False, will use the
@@ -216,39 +216,18 @@ def _M_bands(kx, ky, feq, splE, splO, splM, tau=0, EF=0, byparts=True):
         in units of (Bohr magneton / um^2) / (V / m)
     '''
     N = feq.shape[0]
-    M_no_dot_E = np.zeros((N, 2))  # second dim is two components of integrand
+    alpha = np.zeros((N, 2))  # second dim is two components of integrand
 
     if byparts:
-        integral = _M_integral_by_parts
+        integral = _ME_coef_integral_by_parts
     else:
-        integral = _M_integral
+        integral = _ME_coef_integral
 
     for i in range(N):
         if (np.abs(feq[i]).max() < 1e-4):  # Band unoccupied!
             continue  # Don't bother calculating the magnetization - it is zero.
 
-        M_no_dot_E[i] = integral(kx, ky, feq[i], splE[i], splO[i], splM[i],
-                            tau=tau, EF=EF)
+        alpha[i] = integral(kxa, kya, feq[i], splE[i], splO[i], splM[i],
+                             EF=EF)
 
-    return M_no_dot_E.sum(axis=0)  # sum over bands
-
-
-def D_valley(kx, ky, f, splO):
-    '''
-    Integrates over k space to get Berry curvature dipole for one valley.
-    Integral is not summed over bands!
-
-    Parameters:
-    - kx, ky: Nkx, Nky arrays of kx, ky points
-    - f: N(=4) x Nkx x Nky array of occupation for valley K or K'
-    - splO: N(=4) array of splines for berry curvature in each band
-    '''
-    N = f.shape[0]  # 4
-    D = np.empty(N)
-
-    for n in range(N):
-        Omega_dkx = splO[n](kx, ky, dx=1)
-        D[n] = simps(simps(Omega_dkx * f[n], ky), kx)
-            # integral over y (axis -1) then x (axis -1 of the result of simps)
-
-    return D  # not yet summed over bands
+    return alpha.sum(axis=0)  # sum over bands
