@@ -21,9 +21,9 @@ def H_4by4(Kxa, Kya, Delta=0, sl=None):
     I = np.eye(2) # 2x2 identity matrix
 
     # Nearest-neighbor matrix elements
-    H0 = o
-    H3 = o
-    H4 = o
+    H0 = o.copy()
+    H3 = o.copy()
+    H4 = o.copy()
     for (delta, gamma0, gamma3, gamma4) in zip(sl.deltas, sl.gamma0s,
                                                sl.gamma3s, sl.gamma4s):
         H0 += gamma0 * np.exp(1j * Ka.dot(delta))
@@ -31,7 +31,7 @@ def H_4by4(Kxa, Kya, Delta=0, sl=None):
         H4 += gamma4 * np.exp(1j * Ka.dot(delta))
 
     # Next-nearest neighbor matrix element
-    Hn = o
+    Hn = o.copy()
     for (deltan, gamman) in zip(sl.deltans, sl.gammans):
         Hn += gamman * np.exp(1j * Ka.dot(deltan))
 
@@ -58,6 +58,7 @@ def dH_4by4(Kxa, Kya, eps=0, theta=0):
     Returns:
     H_dkx, H_dky: derivatives of H, shape 4 x 4 x Nkx x Nky
     '''
+    raise Exception('Incorporate strained lattice classs')
     # K vector
     Ka = np.stack([Kxa, Kya], axis=-1)
 

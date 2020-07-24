@@ -1,5 +1,7 @@
 import numpy as np
 from numpy import sin, cos
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 import itertools
 from scipy.spatial import Voronoi
 from scipy.optimize import minimize
@@ -98,6 +100,9 @@ class StrainedLattice:
         # Calculate hopping parameters with all parameters turned on
         self._calc_hopping()
 
+        # Calculate brillouin zone vertices
+        self.bz = brillouin_zone(self.strain)
+
 
     def _calc_hopping(self, turn_off=[]):
         '''
@@ -120,12 +125,12 @@ class StrainedLattice:
         for delta in deltas:
             deltap = (I + self.strain).dot(delta)
 
-            gamma0p = gamma0 * (1 + eta0) * np.linalg.norm(deltap - delta) \
-                                              / np.linalg.norm(delta)
-            gamma3p = gamma3 * (1 + eta3) * np.linalg.norm(deltap - delta) \
-                                              / np.linalg.norm(delta)
-            gamma4p = gamma4 * (1 + eta4) * np.linalg.norm(deltap - delta) \
-                                              / np.linalg.norm(delta)
+            gamma0p = gamma0 * (1 + eta0 * np.linalg.norm(deltap - delta) \
+                                              / np.linalg.norm(delta))
+            gamma3p = gamma3 * (1 + eta3 * np.linalg.norm(deltap - delta) \
+                                              / np.linalg.norm(delta))
+            gamma4p = gamma4 * (1 + eta4 * np.linalg.norm(deltap - delta) \
+                                              / np.linalg.norm(delta))
 
             self.deltas.append(deltap)
             self.gamma0s.append(gamma0p)
@@ -135,8 +140,8 @@ class StrainedLattice:
         for delta in deltans:
             deltap = (I + self.strain).dot(delta)
 
-            gammanp = gamman * (1 + etan) * np.linalg.norm(deltap - delta) \
-                                              / np.linalg.norm(delta)
+            gammanp = gamman * (1 + etan * np.linalg.norm(deltap - delta) \
+                                              / np.linalg.norm(delta))
 
             self.deltans.append(deltap)
             self.gammans.append(gammanp)
@@ -175,3 +180,12 @@ class StrainedLattice:
         self.K = res.x
         res = minimize(f, self.Kp_bz)
         self.Kp = res.x
+
+    def plot_bz(self, ax):
+        '''
+        Draws the Brillouin zone and Dirac points on the given axis object ax.
+        '''
+        p = Polygon(self.bz, fill=False, color='k', lw=2)
+        ax.add_patch(p)
+        ax.plot(*self.K, 'or')
+        ax.plot(*self.Kp, 'or')
