@@ -164,8 +164,8 @@ class StrainedLattice:
         # Calculate band structure with Delta = 0 and some hoppings turned off
         self._calc_hopping(turn_off=['gamma3', 'gamma4', 'gamman', 'DeltaAB'])
 
-        kxa, kya, Kxa, Kya, E, Psi = get_bands(kxalims=[-1.2*K, 1.2*K],
-            kyalims=[-1.2*K, 1.2*K], Nkx=200, Nky=200, sl=self)
+        kxa, kya, Kxa, Kya, E, Psi = get_bands(self, kxalims=[-1.2*K, 1.2*K],
+            kyalims=[-1.2*K, 1.2*K], Nkx=200, Nky=200)
 
         # K and K' points of the strained Brillouin zone
         self.K_bz = strained_K(self.strain, Kprime=False)
