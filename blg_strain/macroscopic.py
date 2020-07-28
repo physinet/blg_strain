@@ -212,8 +212,7 @@ def ME_coef(kxa, kya, feq, splE, splO, splM, EF=0, byparts=True):
         function `_M_integral`
 
     Returns:
-    - a length-2 array of x/y components of magnetization "divided by" E field
-        in units of (Bohr magneton / um^2) / (V / m)
+    - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
     N = feq.shape[0]
     alpha = np.zeros((N, 2))  # second dim is two components of integrand

@@ -151,14 +151,17 @@ class Valley:
     Contains calcualted band structure around one Dirac point for given
     strained lattice and choice of interlayer asymmetry.
     '''
-    def __init__(self, sl, Delta=0, valley='K'):
+    def __init__(self, sl, window=0.1, Delta=0, valley='K'):
         '''
         sl: an instance of the `lattice.StrainedLattice` class
+        window: region of K-space to sample (in units of 1/a0). A value of 0.1
+            corresponds to 0.7 nm^-1.
         Delta: interlayer asymmetry (eV)
         valley: either 'K' or 'Kp' - choose valley to calculate band structure
             around. The locations of each valley are stored in sl.K and sl.Kp.
         '''
         self.sl = sl
+        self.window = window
         self.Delta = Delta
         self.valley = valley
 
@@ -172,8 +175,8 @@ class Valley:
         '''
         # Initial calculations with the number of points given in kwargs
         K = getattr(self.sl, self.valley)
-        kxalims = K[0] - 0.1, K[0] + 0.1
-        kyalims = K[1] - 0.1, K[1] + 0.1
+        kxalims = K[0] - self.window/2, K[0] + self.window/2
+        kyalims = K[1] - self.window/2, K[1] + self.window/2
         self._kxa, self._kya, self._Kxa, self._Kya, self._E, self._Psi = \
             get_bands(self.sl, kxalims=kxalims, kyalims=kyalims, Nkx=Nkx,
                 Nky=Nky, Delta=self.Delta)
@@ -198,16 +201,19 @@ class BandStructure:
     Contains calculated band structure around the Dirac points (simply labeled
     K and K') for given strained lattice and choice of interlayer asymmetry.
     '''
-    def __init__(self, sl, Delta=0):
+    def __init__(self, sl, window=0.1, Delta=0):
         '''
         sl: an instance of the `lattice.StrainedLattice` class
+        window: region of K-space to sample (in units of 1/a0). A value of 0.1
+            corresponds to 0.7 nm^-1.
         Delta: interlayer asymmetry (eV)
         '''
         self.sl = sl
+        self.window = window
         self.Delta = Delta
 
-        self.K = Valley(sl, Delta, 'K')
-        self.Kp = Valley(sl, Delta, 'Kp')
+        self.K = Valley(sl, window=window, Delta=Delta, valley='K')
+        self.Kp = Valley(sl, window=window, Delta=Delta, valley='Kp')
 
 
     def calculate(self, Nkx_new=2000, Nky_new=2000):
@@ -219,16 +225,23 @@ class BandStructure:
         self.K._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
         self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
 
+        self.shift_zero_energy()
 
-    def get_zero_energy(self):
+
+    def shift_zero_energy(self):
         '''
         Calculates a reasonable "zero" energy point. Finds the average of the
         valence band maximum and conduction band minimum, and then averages
-        this quantity over K and K' valleys.
+        this quantity over K and K' valleys. Stored in `BandStructure.E0`.
+        The energy bands in `BandStructure.K` and `BandStructure.K` are shifted
+        such that this is now the zero energy point.
         '''
         zero_K = np.mean([self.K.E[1].max(), self.K.E[2].min()])
         zero_Kp = np.mean([self.Kp.E[1].max(), self.Kp.E[2].min()])
-        return np.mean([zero_K, zero_Kp])
+        self.E0 = np.mean([zero_K, zero_Kp])
+
+        self.K.E -= self.E0
+        self.Kp.E -= self.E0
 
 
     @classmethod
@@ -273,7 +286,7 @@ class FilledBands:
         - T: Temperature (K)
         '''
         self.bs = bs
-        self.EF = EF + bs.get_zero_energy()  # relative to center of gap
+        self.EF = EF
         self.T = T
 
 
@@ -304,22 +317,12 @@ class FilledBands:
     def get_nD(self):
         '''
         Calculates the total carrier density and displacement field (parameters
-        that can be tuned experimentally). This requires calculating the carrier
-        density for each valley/layer combination. These quantities are stored,
-        for example, in `BandStructure.K.n1` for the density on layer 1 in
-        valley K. The carrier density and displacement field are stored in
-        `BandStructure.n` (units m^-2) and `BandStructure.D` (units V / m).
+        that can be tuned experimentally). The carrier density and displacement
+        field are stored in `FilledBands.n` (units m^-2) and `FilledBands.D`
+        (units V / m).
         '''
-        if not hasattr(self.K, 'feq'):
-            raise Exception('Calculate feq using `get_feq` first!')
 
-        for v in (self.K, self.Kp):
-            for i in [1,2]:
-                setattr(v, 'n%i' %i, n_valley_layer(v.kx, v.ky, v.feq, v.Psi,
-                    layer=i))
-
-        self.n = self.K.n1 + self.K.n2 + self.Kp.n1 + self.Kp.n2
-        self.D = disp_field(self.Delta, self.K.n1 + self.Kp.n1,
-            self.K.n2 + self.Kp.n2)
+        self.n = self.n1 + self.n2 + self.n1p + self.n2p
+        self.D = D_field(self.bs.Delta, self.n1 + self.n1p, self.n2 + self.n2p)
 
         return self.n, self.D

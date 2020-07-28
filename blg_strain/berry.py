@@ -18,7 +18,7 @@ def berry_mu(Kxa, Kya, sl, E, Psi, einsum=True):
 
     Returns:
     - Omega: n(=4) x Nkx x Nky array of Berry curvature (units m^2)
-    - Mu: n(=4) x Nkx x Nky array of magnetic moment (units Bohr magneton)
+    - Mu: n(=4) x Nkx x Nky array of magnetic moment (units A * m^2)
     '''
 
     hdkx, hdky = dH_4x4(Kxa, Kya, sl, 0), dH_4x4(Kxa, Kya, sl, 1)
