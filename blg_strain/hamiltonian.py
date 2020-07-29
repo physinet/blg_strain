@@ -1,5 +1,5 @@
 import numpy as np
-from .utils.const import hbar, gamma1
+from .utils.const import hbar, gamma1, a0
 
 
 def H_4x4(Kxa, Kya, sl, Delta=0):
@@ -46,7 +46,7 @@ def H_4x4(Kxa, Kya, sl, Delta=0):
 
 def dH_4x4(Kxa, Kya, sl, xy=0):
     '''
-    Returns the derivative (w.r.t. kx*a) of the 4 x 4 Hamiltonian
+    Returns the derivative (w.r.t. kx or ky) of the 4 x 4 Hamiltonian
     Units are eV
 
     Parameters
@@ -77,7 +77,8 @@ def dH_4x4(Kxa, Kya, sl, xy=0):
     for (deltan, gamman) in zip(sl.deltans, sl.gammans):
         dHn += gamman * np.exp(1j * Ka.dot(deltan)) * 1j * deltan[xy]
 
-    return np.array([
+    # Multiply by a0 to make the derivative w.r.t. kx or ky, not kx*a0
+    return a0 * np.array([
         [dHn, dH3, -dH4.conj(), dH0.conj()],
         [dH3.conj(), dHn, dH0, -dH4],
         [-dH4, dH0.conj(), dHn, o],

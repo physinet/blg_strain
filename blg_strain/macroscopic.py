@@ -144,6 +144,8 @@ def _ME_coef_integral(kxa, kya, feq, splE, splO, splM, EF=0):
     # non-equilibrium occupation ("divided by" dot product with E field)
     # we exclude equilibrium term that integrates to zero
     # note prefactor hbar is in J * s
+    # factors of a0 to take care of integration and gradient w.r.t. k*a
+
     f = a0 * q / (hbar_J * mu0) * np.array(np.gradient(feq, kxa, kya,
                                                         axis=(-2, -1)))
 
@@ -183,7 +185,9 @@ def _ME_coef_integral_by_parts(kxa, kya, feq, splE, splO, splM, EF=0):
     Mu_grad = np.array([splM(kxa, kya, dx=1), splM(kxa, kya, dy=1)])
 
     # note prefactor hbar is in J * s
+    # factors of a0 to take care of integration and gradient w.r.t. k*a
     prefactor = - a0 * q / (hbar_J * mu0) / (2 * np.pi * a0) ** 2 * feq
+    # prefactor = - q / (hbar_J * mu0) / (2 * np.pi) ** 2 * feq
     integrand = prefactor * (Mu_grad  \
                      + q / hbar * O_grad * (EF - E)\
                      - q / hbar * O * E_grad

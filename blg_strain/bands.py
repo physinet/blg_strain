@@ -6,7 +6,7 @@ from .microscopic import feq_func
 from .macroscopic import n_valley_layer, D_field, ME_coef
 from .utils.utils import make_grid, get_splines, densify
 
-from .utils.const import K
+from .utils.const import K, a0
 
 
 
