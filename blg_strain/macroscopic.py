@@ -230,7 +230,6 @@ def ME_coef(kxa, kya, feq, splE, splO, splM, EF=0, byparts=True):
         if (np.abs(feq[i]).max() < 1e-4):  # Band unoccupied!
             continue  # Don't bother calculating the magnetization - it is zero.
 
-        alpha[i] = integral(kxa, kya, feq[i], splE[i], splO[i], splM[i],
-                             EF=EF)
+        alpha[i] = integral(kxa, kya, feq[i], splE[i], splO[i], splM[i], EF=EF)
 
     return alpha.sum(axis=0)  # sum over bands

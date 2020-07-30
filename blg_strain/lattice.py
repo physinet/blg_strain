@@ -72,7 +72,7 @@ def strained_K(strain, Kprime=False):
     '''
     bz = np.array(brillouin_zone(strain))  # list to array
     KK = np.array([K, 0])
-    if Kprime:
+    if not Kprime: # following convention that Berry curvature +ive in K valley
         KK *= -1
 
     dist2 = ((bz - KK) ** 2).sum(axis=1)  # Dist between K point and bz vertices
@@ -92,6 +92,8 @@ class StrainedLattice:
         theta: uniaxial strain direction
         '''
         # Strain tensor
+        self.eps = eps
+        self.theta = theta
         self.strain = strain_tensor(eps, theta)
 
         # Find shifted K and K' points
@@ -125,12 +127,12 @@ class StrainedLattice:
         for delta in deltas:
             deltap = (I + self.strain).dot(delta)
 
-            gamma0p = gamma0 * (1 + eta0 * np.linalg.norm(deltap - delta) \
-                                              / np.linalg.norm(delta))
-            gamma3p = gamma3 * (1 + eta3 * np.linalg.norm(deltap - delta) \
-                                              / np.linalg.norm(delta))
-            gamma4p = gamma4 * (1 + eta4 * np.linalg.norm(deltap - delta) \
-                                              / np.linalg.norm(delta))
+            gamma0p = gamma0 * np.exp(eta0 * (np.linalg.norm(deltap) \
+                                           / np.linalg.norm(delta) - 1))
+            gamma3p = gamma3 * np.exp(eta3 * (np.linalg.norm(deltap) \
+                                           / np.linalg.norm(delta) - 1))
+            gamma4p = gamma4 * np.exp(eta4 * (np.linalg.norm(deltap) \
+                                           / np.linalg.norm(delta) - 1))
 
             self.deltas.append(deltap)
             self.gamma0s.append(gamma0p)
