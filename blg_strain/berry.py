@@ -21,7 +21,7 @@ def berry_mu(Kxa, Kya, sl, E, Psi, einsum=True):
     - Mu: n(=4) x Nkx x Nky array of magnetic moment (units A * m^2)
     '''
 
-    hdkx, hdky = dH_4x4(Kxa, Kya, sl, 0), dH_4x4(Kxa, Kya, sl, 1)
+    hdkx, hdky = dH_4x4(Kxa, Kya, sl)
 
     Omega = np.zeros_like(Psi, dtype='float')  # N x N x Nkx x Nky; first dim
     Mu = np.zeros_like(Psi, dtype='float')     # summed over bands m != n
