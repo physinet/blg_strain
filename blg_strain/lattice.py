@@ -72,7 +72,7 @@ def strained_K(strain, Kprime=False):
     '''
     bz = np.array(brillouin_zone(strain))  # list to array
     KK = np.array([K, 0])
-    if not Kprime: # following convention that Berry curvature +ive in K valley
+    if Kprime:
         KK *= -1
 
     dist2 = ((bz - KK) ** 2).sum(axis=1)  # Dist between K point and bz vertices
@@ -182,6 +182,7 @@ class StrainedLattice:
         self.K = res.x
         res = minimize(f, self.Kp_bz)
         self.Kp = res.x
+
 
     def plot_bz(self, ax):
         '''

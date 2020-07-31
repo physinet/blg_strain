@@ -10,8 +10,8 @@ from .utils.const import K, a0
 
 
 
-def get_bands(sl, kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K], Nkx=200,
-                Nky=200, Delta=0, ham='4x4', eigh=False):
+def get_bands(sl, kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K],
+                Nkx=200, Nky=200, Delta=0, ham='4x4', eigh=False):
     '''
     Calculate energy eigenvalues and eigenvectors for a rectangular window of
     k-space.
@@ -27,7 +27,7 @@ def get_bands(sl, kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K], Nkx=
         with the arrays made with `make_grid(kxlims, kylims, Nkx, Nky)`.
         Shape is N x N (x Nkx x Nky), where the last two dimensions are included
         if the Hamiltonian varies with kx and ky.
-    - eigh: if True, use np.linalg.eigh; if False use np.linalg.eig
+    - eigh: if True, use `np.linalg.eigh`; if False use `np.linalg.eig`
 
     Returns:
     - kxa, kya: Nkx, Nky arrays of kx, ky points

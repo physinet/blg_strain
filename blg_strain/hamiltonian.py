@@ -25,14 +25,14 @@ def H_4x4(Kxa, Kya, sl, Delta=0):
     H4 = o.copy()
     for (delta, gamma0, gamma3, gamma4) in zip(sl.deltas, sl.gamma0s,
                                                sl.gamma3s, sl.gamma4s):
-        H0 += gamma0 * np.exp(1j * Ka.dot(delta))
-        H3 += gamma3 * np.exp(1j * Ka.dot(delta))
-        H4 += gamma4 * np.exp(1j * Ka.dot(delta))
+        H0 += -gamma0 * np.exp(1j * Ka.dot(delta))
+        H3 += -gamma3 * np.exp(1j * Ka.dot(delta))
+        H4 += -gamma4 * np.exp(1j * Ka.dot(delta))
 
     # Next-nearest neighbor matrix element
     Hn = o.copy()
     for (deltan, gamman) in zip(sl.deltans, sl.gammans):
-        Hn += gamman * np.exp(1j * Ka.dot(deltan))
+        Hn += -gamman * np.exp(1j * Ka.dot(deltan))
 
     H = np.array([
         [-Delta / 2 + Hn, H3, -H4.conj(), H0.conj()],
@@ -68,14 +68,14 @@ def dH_4x4(Kxa, Kya, sl, xy=0):
     dH4 = o.copy()
     for (delta, gamma0, gamma3, gamma4) in zip(sl.deltas, sl.gamma0s,
                                                sl.gamma3s, sl.gamma4s):
-        dH0 += gamma0 * np.exp(1j * Ka.dot(delta)) * 1j * delta[xy]
-        dH3 += gamma3 * np.exp(1j * Ka.dot(delta)) * 1j * delta[xy]
-        dH4 += gamma4 * np.exp(1j * Ka.dot(delta)) * 1j * delta[xy]
+        dH0 += -gamma0 * np.exp(1j * Ka.dot(delta)) * 1j * delta[xy]
+        dH3 += -gamma3 * np.exp(1j * Ka.dot(delta)) * 1j * delta[xy]
+        dH4 += -gamma4 * np.exp(1j * Ka.dot(delta)) * 1j * delta[xy]
 
     # Next-nearest neighbor matrix element
     dHn = o.copy()
     for (deltan, gamman) in zip(sl.deltans, sl.gammans):
-        dHn += gamman * np.exp(1j * Ka.dot(deltan)) * 1j * deltan[xy]
+        dHn += -gamman * np.exp(1j * Ka.dot(deltan)) * 1j * deltan[xy]
 
     # Multiply by a0 to make the derivative w.r.t. kx or ky, not kx*a0
     return a0 * np.array([
