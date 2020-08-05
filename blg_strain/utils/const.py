@@ -22,9 +22,9 @@ nu = 0.165  # Poisson ratio for graphene (in general this should be that of the 
 gamma0 = 3.16
 gamma1 = 0.381
 gamma3 = 0.38
-gamma4 = 0.14 * 0
-gamman = 0.1 * gamma0 * 0
-DeltaAB = 0.022 * 0  # dimer asymmetry
+gamma4 = 0.14 
+gamman = 0.1 * gamma0
+DeltaAB = 0.022  # dimer asymmetry
 
 # Estimated Gruneisen parameters
 # eta0 = -2

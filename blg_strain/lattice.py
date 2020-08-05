@@ -86,10 +86,11 @@ class StrainedLattice:
     the strain tensor, the changes in bond lengths and hopping parameters due
     to strain, and the new location of the Dirac points under strain.
     '''
-    def __init__(self, eps=0, theta=0):
+    def __init__(self, eps=0, theta=0, turn_off=[]):
         '''
         eps: uniaxial strain magnitude
         theta: uniaxial strain direction
+        turn_off: list of parameter names to turn off. For example, ['gamma3'].
         '''
         # Strain tensor
         self.eps = eps
@@ -100,7 +101,7 @@ class StrainedLattice:
         self._get_valleys()
 
         # Calculate hopping parameters with all parameters turned on
-        self._calc_hopping()
+        self._calc_hopping(turn_off=turn_off)
 
         # Calculate brillouin zone vertices
         self.bz = brillouin_zone(self.strain)
@@ -149,6 +150,8 @@ class StrainedLattice:
             self.gammans.append(gammanp)
 
         for param in turn_off:
+            if param not in ['gamma0', 'gamma3', 'gamma4', 'gamman', 'DeltaAB']:
+                raise Exception('{} is not a valid parameter'.format(param))
             if param == 'DeltaAB':
                 self.DeltaAB = 0
             else:
