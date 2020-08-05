@@ -291,27 +291,28 @@ class FilledBands:
 
 
     def calculate(self):
-        self.feq_K = feq_func(self.bs.K.E, self.EF, self.T)
-        self.feq_Kp = feq_func(self.bs.Kp.E, self.EF, self.T)
+        K = self.bs.K
+        Kp = self.bs.Kp
+
+        self.feq_K = feq_func(K.E, self.EF, self.T)
+        self.feq_Kp = feq_func(Kp.E, self.EF, self.T)
 
         # Carrier density (m^-2) (contributions from each valley and layer)
-        self.n1 = n_valley_layer(self.bs.K.kxa, self.bs.K.kya, self.feq_K,
-            self.bs.K.Psi, layer=1)
-        self.n2 = n_valley_layer(self.bs.K.kxa, self.bs.K.kya, self.feq_K,
-            self.bs.K.Psi, layer=2)
-        self.n1p = n_valley_layer(self.bs.Kp.kxa, self.bs.Kp.kya, self.feq_Kp,
-            self.bs.Kp.Psi, layer=1)
-        self.n2p = n_valley_layer(self.bs.Kp.kxa, self.bs.Kp.kya, self.feq_Kp,
-            self.bs.Kp.Psi, layer=2)
+        self.n1 = n_valley_layer(K.kxa, K.kya, self.feq_K, K.Psi, layer=1)
+        self.n2 = n_valley_layer(K.kxa, K.kya, self.feq_K, K.Psi, layer=2)
+        self.n1p = n_valley_layer(Kp.kxa, Kp.kya, self.feq_Kp, Kp.Psi, layer=1)
+        self.n2p = n_valley_layer(Kp.kxa, Kp.kya, self.feq_Kp, Kp.Psi, layer=2)
 
         # Displacement field (V/m)
         self.D = D_field(self.bs.Delta, self.n1 + self.n1p, self.n2 + self.n2p)
 
         # ME coefficient
-        self.alpha = 0
-        for v, f in zip([self.bs.K, self.bs.Kp], [self.feq_K, self.feq_Kp]):
-            self.alpha += ME_coef(v.kxa, v.kya, f, v.splE, v.splO, v.splM,
-                                    self.EF)
+        self.alpha_K = ME_coef(K.kxa, K.kya, self.feq_K, K.splE, K.splO, K.splM,
+            self.EF)
+        self.alpha_Kp = ME_coef(Kp.kxa, Kp.kya, self.feq_Kp, Kp.splE, Kp.splO,
+            Kp.splM, self.EF)
+
+        self.alpha = self.alpha_K + self.alpha_Kp
 
 
     def get_nD(self):

@@ -168,6 +168,8 @@ class StrainedLattice:
 
         kxa, kya, Kxa, Kya, E, Psi = get_bands(self, kxalims=[-1.2*K, 1.2*K],
             kyalims=[-1.2*K, 1.2*K], Nkx=200, Nky=200)
+        self._kxa, self._kya, self._Kxa, self._Kya, self._E, self._Psi = \
+            kxa, kya, Kxa, Kya, E, Psi
 
         # K and K' points of the strained Brillouin zone
         self.K_bz = strained_K(self.strain, Kprime=False)
@@ -179,10 +181,14 @@ class StrainedLattice:
             return spl(*x)
 
         res = minimize(f, self.K_bz)
-        self.K = res.x
+        KK = res.x
         res = minimize(f, self.Kp_bz)
-        self.Kp = res.x
+        KKp = res.x
 
+        # Make K and Kp inversion symmetric
+        Kavg = np.mean([abs(KK), abs(KKp)], axis=0)  # Average |coordinates|
+        self.K = np.sign(KK) * Kavg  # Restore signs
+        self.Kp = np.sign(KKp) * Kavg
 
     def plot_bz(self, ax):
         '''

@@ -72,8 +72,8 @@ def dH_4x4(Kxa, Kya, sl):
                                                sl.gamma3s, sl.gamma4s):
         dH0x += -gamma0 * np.exp(1j * Ka.dot(delta)) * 1j * delta[0]
         dH0y += -gamma0 * np.exp(1j * Ka.dot(delta)) * 1j * delta[1]
-        dH3x += -gamma3 * np.exp(-1j * Ka.dot(delta)) * 1j * delta[0]
-        dH3y += -gamma3 * np.exp(-1j * Ka.dot(delta)) * 1j * delta[1]
+        dH3x += gamma3 * np.exp(-1j * Ka.dot(delta)) * 1j * delta[0]
+        dH3y += gamma3 * np.exp(-1j * Ka.dot(delta)) * 1j * delta[1]
         dH4x += gamma4 * np.exp(1j * Ka.dot(delta)) * 1j * delta[0]
         dH4y += gamma4 * np.exp(1j * Ka.dot(delta)) * 1j * delta[1]
 
