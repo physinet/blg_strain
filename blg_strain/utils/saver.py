@@ -56,11 +56,13 @@ class Saver:
         return obj
 
 
-    def save_hdf5(self, filename):
+    def save_hdf5(self, filename, compression=None):
         '''
         Saves data to a compressed .h5 file
 
         filename: full path of destination file
+        compression: (int) specified as kwarg compression_opts for
+            h5py.Group.create_dataset
         '''
         with h5py.File(filename, 'w') as f:
             # Recursively search dictionary structure of the class
@@ -74,12 +76,10 @@ class Saver:
                         write_layer(group2, v)
                     else:
                         kwargs = {}
-                        ''' Compression - didn't help '''
-                        # if type(v) is np.ndarray:
-                        #       # maximum compression for numpy arrays
-                        #     pass
-                        #     kwargs.update(dict(compression='gzip',
-                        #                         compression_opts=1))
+                        if compression:
+                            if type(v) is np.ndarray:
+                                kwargs.update(dict(compression='gzip',
+                                                compression_opts=compression))
                         try:
                             group.create_dataset(k, data=v, **kwargs)
                         except: # in case we try to save a spline, for example
