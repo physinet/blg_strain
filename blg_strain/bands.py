@@ -151,7 +151,7 @@ class Valley(Saver):
     Contains calcualted band structure around one Dirac point for given
     strained lattice and choice of interlayer asymmetry.
     '''
-    def __init__(self, sl, window=0.1, Delta=0, valley='K'):
+    def __init__(self, sl=Saver(), window=0.1, Delta=0, valley='K'):
         '''
         sl: an instance of the `lattice.StrainedLattice` class
         window: region of K-space to sample (in units of 1/a0). A value of 0.1
@@ -201,7 +201,7 @@ class BandStructure(Saver):
     Contains calculated band structure around the Dirac points (simply labeled
     K and K') for given strained lattice and choice of interlayer asymmetry.
     '''
-    def __init__(self, sl, window=0.1, Delta=0):
+    def __init__(self, sl=Saver(), window=0.1, Delta=0):
         '''
         sl: an instance of the `lattice.StrainedLattice` class
         window: region of K-space to sample (in units of 1/a0). A value of 0.1
@@ -249,7 +249,7 @@ class FilledBands(Saver):
     Class to contain information derived from a band structure given a specified
     Fermi level E_F and temperature T.
     '''
-    def __init__(self, bs, EF=0, T=0):
+    def __init__(self, bs=Saver(), EF=0, T=0):
         '''
         Parameters:
         - bs: an instance of the `BandStructure` class

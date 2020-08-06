@@ -11,12 +11,24 @@ class Saver:
 
         with h5py.File(filename, 'r') as f:
             def read_layer(group):
-                obj = cls()  # inizialize class object
+                classname = group.attrs['class'].split('.')[-1]
+                if classname == cls.__name__:
+                    obj = cls()  # inizialize class object
+                else:
+                    try:
+                        # Import all the possible classes
+                        from ..lattice import StrainedLattice
+                        from ..bands import Valley
+                        from ..bands import BandStructure
+                        from ..bands import FilledBands
+                        obj = eval('{}()'.format(classname))  # instantiate
+                    except:
+                        raise Exception('Could not find {}'.format(classname))
                 for k, v in group.items():
                     if isinstance(v, h5py.Group): # is a group
                         obj.__dict__[k] = read_layer(v)
                     else:
-                        obj.__dict__[k] = v[()] # [()] gets values from h5py.Dataset
+                        obj.__dict__[k] = v[()] # [()] gets values from Dataset
                 return obj
             obj = read_layer(f)
 
@@ -31,11 +43,21 @@ class Saver:
         '''
         with h5py.File(filename, 'w') as f:
             # Recursively search dictionary structure of the class
-            def write_layer(group, d):
-                for k, v in d.items():
+            def write_layer(group, obj):
+                classname = '{0}.{1}'.format(obj.__class__.__module__,
+                                             obj.__class__.__name__)
+                group.attrs['class'] = classname
+                for k, v in obj.__dict__.items():
                     if hasattr(v, '__dict__'): # classes have __dict__
                         group2 = group.create_group(k)
-                        write_layer(group2, v.__dict__)
+                        write_layer(group2, v)
                     else:
-                        group.create_dataset(k, data=v)
-            write_layer(f, self.__dict__)
+                        kwargs = {}
+                        ''' Compression - didn't help '''
+                        # if type(v) is np.ndarray:
+                        #       # maximum compression for numpy arrays
+                        #     pass
+                        #     kwargs.update(dict(compression='gzip',
+                        #                         compression_opts=1))
+                        group.create_dataset(k, data=v, **kwargs)
+            write_layer(f, self)
