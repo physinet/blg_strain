@@ -185,15 +185,23 @@ class Valley(Saver):
                                 self._E, self._Psi)
 
         # Calculate spline interpolations and dense grid
-        self.splE, splPr, splPi, self.splO, self.splM = \
-            get_splines(self._kxa, self._kya, self._E, self._Psi.real,
-                self._Psi.imag, self._Omega, self._Mu)
+        self._get_splines()
         self.kxa, self.kya, self.E, Pr, Pi, self.Omega, self.Mu = \
-            densify(self._kxa, self._kya, self.splE, splPr, splPi, self.splO,
-                self.splM, Nkx_new=Nkx_new, Nky_new=Nky_new)
+            densify(self._kxa, self._kya, self.splE, self.splPr, self.splPi,
+                self.splO, self.splM, Nkx_new=Nkx_new, Nky_new=Nky_new)
         self.Psi = Pr + 1j * Pi  # separate splines for real and imaginary parts
         # Meshgrid using ij indexing for compatibility with RectBivariateSpline
         self.Kxa, self.Kya = np.meshgrid(self.kxa, self.kya, indexing='ij')
+
+
+    def _get_splines(self):
+        '''
+        (Re)calculate the spline interpolations for various quantities. This may
+        be necessary after reloading the object.
+        '''
+        self.splE, self.splPr, self.splPi, self.splO, self.splM = \
+            get_splines(self._kxa, self._kya, self._E, self._Psi.real,
+                self._Psi.imag, self._Omega, self._Mu)
 
 
 class BandStructure(Saver):

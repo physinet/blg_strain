@@ -8,6 +8,23 @@ class Saver:
         Returns a Saver class object with parameters loaded from the .npz file
         at location `filename`.
         '''
+        obj = cls()  # inizialize class object
+
+        data = np.load(filename, allow_pickle=True)
+
+        # Set saved variables as attributes to the class object
+        for attr in data.files:
+            setattr(obj, attr, data[attr].item())
+
+        return obj
+
+
+    @classmethod
+    def load_hdf5(cls, filename):
+        '''
+        Returns a Saver class object with parameters loaded from the .h5 file
+        at location `filename`.
+        '''
 
         with h5py.File(filename, 'r') as f:
             def read_layer(group):
@@ -35,7 +52,7 @@ class Saver:
         return obj
 
 
-    def save(self, filename):
+    def save_hdf5(self, filename):
         '''
         Saves data to a compressed .h5 file
 
@@ -59,5 +76,20 @@ class Saver:
                         #     pass
                         #     kwargs.update(dict(compression='gzip',
                         #                         compression_opts=1))
-                        group.create_dataset(k, data=v, **kwargs)
+                        try:
+                            group.create_dataset(k, data=v, **kwargs)
+                        except: # in case we try to save a spline, for example
+                            group.create_dataset(k, data=[], **kwargs)
             write_layer(f, self)
+
+
+    def save(self, filename):
+        '''
+        Saves data to a compressed .npz file
+
+        filename: full path of destination file
+        '''
+        if filename[-4:] != '.npz':
+            filename += '.npz'
+
+        np.savez_compressed(filename, **self.__dict__)
