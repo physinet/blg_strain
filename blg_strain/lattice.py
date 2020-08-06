@@ -8,7 +8,7 @@ from scipy.optimize import minimize
 from scipy.interpolate import RectBivariateSpline
 
 from .utils.const import K, deltas, deltans, nu, eta0, eta3, eta4, etan, hbar, \
-                            gamma0, gamma3, gamma4, gamman, DeltaAB
+                            gamma0, gamma3, gamma4, gamman, dimer
 from .bands import get_bands
 
 I = np.eye(2)
@@ -113,7 +113,7 @@ class StrainedLattice:
         Use the turn_off argument to turn parameters off. This is useful for
         temporarily ignoring the effects of the smaller hopping parameters.
         List of parameters that can be turned off:
-            gamma0, gamma3, gamma4, gamman, DeltaAB
+            gamma0, gamma3, gamma4, gamman, dimer
         turn_off: list of parameter names to turn off. For example, ['gamma3'].
         '''
 
@@ -123,7 +123,7 @@ class StrainedLattice:
         self.gamma3s = []
         self.gamma4s = []
         self.gammans = []
-        self.DeltaAB = DeltaAB
+        self.dimer = dimer
 
         for delta in deltas:
             deltap = (I + self.strain).dot(delta)
@@ -150,10 +150,10 @@ class StrainedLattice:
             self.gammans.append(gammanp)
 
         for param in turn_off:
-            if param not in ['gamma0', 'gamma3', 'gamma4', 'gamman', 'DeltaAB']:
+            if param not in ['gamma0', 'gamma3', 'gamma4', 'gamman', 'dimer']:
                 raise Exception('{} is not a valid parameter'.format(param))
-            if param == 'DeltaAB':
-                self.DeltaAB = 0
+            if param == 'dimer':
+                self.dimer = 0
             else:
                 exec('self.{0}s = [0 for g in self.{0}s]'.format(param))
 
@@ -167,7 +167,7 @@ class StrainedLattice:
         '''
 
         # Calculate band structure with Delta = 0 and some hoppings turned off
-        self._calc_hopping(turn_off=['gamma3', 'gamma4', 'gamman', 'DeltaAB'])
+        self._calc_hopping(turn_off=['gamma3', 'gamma4', 'gamman', 'dimer'])
 
         kxa, kya, Kxa, Kya, E, Psi = get_bands(self, kxalims=[-1.2*K, 1.2*K],
             kyalims=[-1.2*K, 1.2*K], Nkx=200, Nky=200)

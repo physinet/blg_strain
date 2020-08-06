@@ -37,8 +37,8 @@ def H_4x4(Kxa, Kya, sl, Delta=0):
     H = np.array([
         [-Delta / 2 + Hn, H3, H4, H0],
         [H3.conj(), Delta/2 + Hn, H0.conj(), H4.conj()],
-        [H4.conj(), H0, Delta/2 + Hn + sl.DeltaAB, gamma1 + o],
-        [H0.conj(), H4, gamma1 + o, -Delta/2 + Hn + sl.DeltaAB]
+        [H4.conj(), H0, Delta/2 + Hn + sl.dimer, gamma1 + o],
+        [H0.conj(), H4, gamma1 + o, -Delta/2 + Hn + sl.dimer]
     ]) # Using "o" gives elements proper shape
 
     return H
