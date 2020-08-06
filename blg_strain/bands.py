@@ -7,7 +7,7 @@ from .macroscopic import n_valley_layer, D_field, ME_coef
 from .utils.utils import make_grid, get_splines, densify
 
 from .utils.const import K, a0
-
+from .utils.saver import Saver
 
 
 def get_bands(sl, kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K],
@@ -146,7 +146,7 @@ def fix_first_component_sign(Psi):
     return Psi
 
 
-class Valley:
+class Valley(Saver):
     '''
     Contains calcualted band structure around one Dirac point for given
     strained lattice and choice of interlayer asymmetry.
@@ -196,7 +196,7 @@ class Valley:
         self.Kxa, self.Kya = np.meshgrid(self.kxa, self.kya, indexing='ij')
 
 
-class BandStructure:
+class BandStructure(Saver):
     '''
     Contains calculated band structure around the Dirac points (simply labeled
     K and K') for given strained lattice and choice of interlayer asymmetry.
@@ -244,36 +244,7 @@ class BandStructure:
         self.Kp.E -= self.E0
 
 
-    @classmethod
-    def load(cls, filename):
-        '''
-        Returns a BandStructure class object with parameters loaded from the
-        .npz file at location `filename`.
-        '''
-        obj = cls()  # inizialize class object
-
-        data = np.load(filename, allow_pickle=True)
-
-        # Set saved variables as attributes to the class object
-        for attr in data.files:
-            setattr(obj, attr, data[attr].item())
-
-        return obj
-
-
-    def save(self, filename):
-        '''
-        Saves data to a compressed .npz file
-
-        filename: full path of destination file
-        '''
-        if filename[-4:] != '.npz':
-            filename += '.npz'
-
-        np.savez_compressed(filename, **self.__dict__)
-
-
-class FilledBands:
+class FilledBands(Saver):
     '''
     Class to contain information derived from a band structure given a specified
     Fermi level E_F and temperature T.
