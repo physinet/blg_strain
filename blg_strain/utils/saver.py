@@ -14,7 +14,11 @@ class Saver:
 
         # Set saved variables as attributes to the class object
         for attr in data.files:
-            setattr(obj, attr, data[attr].item())
+            value = data[attr]
+            if value.ndim < 1:
+                setattr(obj, attr, value.item())  # extract scalar
+            else:
+                setattr(obj, attr, value)
 
         return obj
 
