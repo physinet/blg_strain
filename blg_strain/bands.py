@@ -255,13 +255,15 @@ class BandStructure(Saver):
         self.Kp.E -= self.E0
 
 
-    def save(self, path):
+    def save(self):
         '''
         Saves the object
         Delta in the filename reported in meV
 
-        path: save directory
+        This will be saved in a subdirectory named after the StrainedLattice
+        class.
         '''
+        path = os.path.splitext(self.sl.filename)[0]
         filename = 'BandStructure_Nkx{:d}_Nky{:d}_Delta{:.3f}.h5'.format(
             self.Nkx, self.Nky, self.Delta * 1e3
         )
@@ -313,13 +315,15 @@ class FilledBands(Saver):
         self.alpha = self.alpha_K + self.alpha_Kp
 
 
-    def save(self, path):
+    def save(self):
         '''
         Saves the object using compression (feq mostly zero, reduce file size)
         EF in the filename reported in meV
 
-        path: save directory
+        This will be saved in a subdirectory named after the BandStructure
+        class.
         '''
+        path = os.path.splitext(self.bs.filename)[0]
         filename = 'FilledBands_EF{:.3f}_T{:.1f}.h5'.format(self.EF*1e3, self.T)
         self.filename = os.path.join(path, filename)
 

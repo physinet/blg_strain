@@ -218,7 +218,7 @@ class StrainedLattice(Saver):
 
     def save(self, path):
         '''
-        path: save directory
+        path: base directory for all saved data files
         '''
         filename = 'StrainedLattice_eps{:.3f}_theta{:.3f}.h5'.format(
             self.eps, self.theta
