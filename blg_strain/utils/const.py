@@ -38,7 +38,7 @@ etan = -1
 delta1 = np.array([0, 1])
 delta2 = np.array([np.sqrt(3)/2, -1/2])
 delta3 = np.array([-np.sqrt(3)/2, -1/2])
-deltas = [delta1, delta2, delta3]
+deltas = np.array([delta1, delta2, delta3])
 
 # Next-nearest neighbor
 deltan1 = np.array([np.sqrt(3), 0])
@@ -47,4 +47,4 @@ deltan3 = np.array([np.sqrt(3)/2, 3/2])
 deltan4 = np.array([np.sqrt(3)/2, -3/2])
 deltan5 = np.array([-np.sqrt(3)/2, 3/2])
 deltan6 = np.array([-np.sqrt(3)/2, -3/2])
-deltans = [deltan1, deltan2, deltan3, deltan4, deltan5, deltan6]
+deltans = np.array([deltan1, deltan2, deltan3, deltan4, deltan5, deltan6])

@@ -4,6 +4,10 @@ import h5py
 class Saver:
     @classmethod
     def load(cls, filename):
+        return cls.load_hdf5(filename)
+
+    @classmethod
+    def load_npz(cls, filename):
         '''
         Returns a Saver class object with parameters loaded from the .npz file
         at location `filename`.
@@ -56,6 +60,14 @@ class Saver:
         return obj
 
 
+    def save(self, filename, compression=None):
+        '''
+        Saves data to a file. Use this function to wrap either `safe_hdf5` or
+        `save_npz`. We currently wrap `safe_hdf5`.
+        '''
+        self.save_hdf5(filename, compression=compression)
+
+
     def save_hdf5(self, filename, compression=None):
         '''
         Saves data to a compressed .h5 file
@@ -71,10 +83,18 @@ class Saver:
                                              obj.__class__.__name__)
                 group.attrs['class'] = classname
                 for k, v in obj.__dict__.items():
-                    if hasattr(v, '__dict__'): # classes have __dict__
+                    # Find objects
+                    if hasattr(v, '__dict__'): # objects have __dict__
+                        # Some objects are common to multiple instances of a
+                        # class (e.g. a series of FilledBands would have the
+                        # same BandStructure). Be sure to save separately.
+                        classes_to_skip = ['BandStructure', 'StrainedLattice']
+                        if v.__class__.__name__ in classes_to_skip:
+                            continue
+                        # If it's a class we want to save, create a group for it
                         group2 = group.create_group(k)
                         write_layer(group2, v)
-                    else:
+                    else: # arrays, scalars, or even functions
                         kwargs = {}
                         if compression:
                             if type(v) is np.ndarray:
@@ -82,12 +102,12 @@ class Saver:
                                                 compression_opts=compression))
                         try:
                             group.create_dataset(k, data=v, **kwargs)
-                        except: # in case we try to save a spline, for example
+                        except: # it's probably a function (e.g. a spline)
                             group.create_dataset(k, data=[], **kwargs)
             write_layer(f, self)
 
 
-    def save(self, filename):
+    def save_npz(self, filename):
         '''
         Saves data to a compressed .npz file
 
@@ -96,4 +116,14 @@ class Saver:
         if filename[-4:] != '.npz':
             filename += '.npz'
 
-        np.savez_compressed(filename, **self.__dict__)
+        # walk through dictionary and pop all keys that are 'sl' or 'bs'
+        # This is not as general as I would like
+        def walk(d):
+            for k, v in d.items():
+                if hasattr(v, '__dict__'):
+                    walk(v.__dict__)
+            for key in ['sl', 'bs']:
+                d.pop(key, None)
+            return d
+
+        np.savez_compressed(filename, **walk(self.__dict__))

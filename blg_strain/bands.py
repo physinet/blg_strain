@@ -177,19 +177,20 @@ class Valley(Saver):
         K = getattr(self.sl, self.valley)
         kxalims = K[0] - self.window/2, K[0] + self.window/2
         kyalims = K[1] - self.window/2, K[1] + self.window/2
-        self._kxa, self._kya, self._Kxa, self._Kya, self._E, self._Psi = \
+        self.kxa, self.kya, self.Kxa, self.Kya, self.E, self.Psi = \
             get_bands(self.sl, kxalims=kxalims, kyalims=kyalims, Nkx=Nkx,
                 Nky=Nky, Delta=self.Delta)
 
-        self._Omega, self._Mu = berry_mu(self._Kxa, self._Kya, self.sl,
-                                self._E, self._Psi)
+        self.Omega, self.Mu = berry_mu(self.Kxa, self.Kya, self.sl,
+                                self.E, self.Psi)
 
         # Calculate spline interpolations and dense grid
         self._get_splines()
         self.kxa, self.kya, self.E, Pr, Pi, self.Omega, self.Mu = \
-            densify(self._kxa, self._kya, self.splE, self.splPr, self.splPi,
+            densify(self.kxa, self.kya, self.splE, self.splPr, self.splPi,
                 self.splO, self.splM, Nkx_new=Nkx_new, Nky_new=Nky_new)
-        self.Psi = Pr + 1j * Pi  # separate splines for real and imaginary parts
+        # combine real and imaginary parts - cast to lower precision to save mem
+        self.Psi = np.array(Pr + 1j * Pi, dtype='complex64')
         # Meshgrid using ij indexing for compatibility with RectBivariateSpline
         self.Kxa, self.Kya = np.meshgrid(self.kxa, self.kya, indexing='ij')
 
@@ -200,8 +201,8 @@ class Valley(Saver):
         be necessary after reloading the object.
         '''
         self.splE, self.splPr, self.splPi, self.splO, self.splM = \
-            get_splines(self._kxa, self._kya, self._E, self._Psi.real,
-                self._Psi.imag, self._Omega, self._Mu)
+            get_splines(self.kxa, self.kya, self.E, self.Psi.real,
+                self.Psi.imag, self.Omega, self.Mu)
 
 
 class BandStructure(Saver):
@@ -306,3 +307,10 @@ class FilledBands(Saver):
         self.D = D_field(self.bs.Delta, self.n1 + self.n1p, self.n2 + self.n2p)
 
         return self.n, self.D
+
+
+    def save(self, filename):
+        '''
+        Saves the object using compression (feq mostly zero, reduce file size)
+        '''
+        super().save(filename, compression=1)

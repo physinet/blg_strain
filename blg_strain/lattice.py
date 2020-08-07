@@ -10,6 +10,7 @@ from scipy.interpolate import RectBivariateSpline
 from .utils.const import K, deltas, deltans, nu, eta0, eta3, eta4, etan, hbar, \
                             gamma0, gamma3, gamma4, gamman, dimer
 from .bands import get_bands
+from .utils.saver import Saver
 
 I = np.eye(2)
 
@@ -80,31 +81,21 @@ def strained_K(strain, Kprime=False):
     return bz[arg]  # closest vertex to K (K')
 
 
-class StrainedLattice:
+class StrainedLattice(Saver):
     '''
     Class to contain one strain state. The most information stored here includes
     the strain tensor, the changes in bond lengths and hopping parameters due
     to strain, and the new location of the Dirac points under strain.
     '''
-    def __init__(self, eps=0, theta=0, turn_off=[]):
+    def __init__(self, eps=0, theta=0):
         '''
         eps: uniaxial strain magnitude
         theta: uniaxial strain direction
-        turn_off: list of parameter names to turn off. For example, ['gamma3'].
         '''
         # Strain tensor
         self.eps = eps
         self.theta = theta
         self.strain = strain_tensor(eps, theta)
-
-        # Find shifted K and K' points
-        self._get_valleys()
-
-        # Calculate hopping parameters with all parameters turned on
-        self._calc_hopping(turn_off=turn_off)
-
-        # Calculate brillouin zone vertices
-        self.bz = brillouin_zone(self.strain)
 
 
     def _calc_hopping(self, turn_off=[]):
@@ -117,15 +108,17 @@ class StrainedLattice:
         turn_off: list of parameter names to turn off. For example, ['gamma3'].
         '''
 
-        self.deltas = []
-        self.deltans = []
-        self.gamma0s = []
-        self.gamma3s = []
-        self.gamma4s = []
-        self.gammans = []
+        self.deltas = np.empty(deltas.shape)
+        self.gamma0s = np.empty(deltas.shape[0])
+        self.gamma3s = np.empty(deltas.shape[0])
+        self.gamma4s = np.empty(deltas.shape[0])
+
+        self.deltans = np.empty(deltans.shape)
+        self.gammans = np.empty(deltans.shape[0])
+
         self.dimer = dimer
 
-        for delta in deltas:
+        for i, delta in enumerate(deltas):
             deltap = (I + self.strain).dot(delta)
 
             gamma0p = gamma0 * np.exp(eta0 * (np.linalg.norm(deltap) \
@@ -135,19 +128,19 @@ class StrainedLattice:
             gamma4p = gamma4 * np.exp(eta4 * (np.linalg.norm(deltap) \
                                            / np.linalg.norm(delta) - 1))
 
-            self.deltas.append(deltap)
-            self.gamma0s.append(gamma0p)
-            self.gamma3s.append(gamma3p)
-            self.gamma4s.append(gamma4p)
+            self.deltas[i] = deltap
+            self.gamma0s[i] = gamma0p
+            self.gamma3s[i] = gamma3p
+            self.gamma4s[i] = gamma4p
 
-        for delta in deltans:
+        for i, delta in enumerate(deltans):
             deltap = (I + self.strain).dot(delta)
 
             gammanp = gamman * (1 + etan * np.linalg.norm(deltap - delta) \
                                               / np.linalg.norm(delta))
 
-            self.deltans.append(deltap)
-            self.gammans.append(gammanp)
+            self.deltans[i] = deltap
+            self.gammans[i] = gammanp
 
         for param in turn_off:
             if param not in ['gamma0', 'gamma3', 'gamma4', 'gamman', 'dimer']:
@@ -171,8 +164,8 @@ class StrainedLattice:
 
         kxa, kya, Kxa, Kya, E, Psi = get_bands(self, kxalims=[-1.2*K, 1.2*K],
             kyalims=[-1.2*K, 1.2*K], Nkx=200, Nky=200)
-        self._kxa, self._kya, self._Kxa, self._Kya, self._E, self._Psi = \
-            kxa, kya, Kxa, Kya, E, Psi
+        # self._kxa, self._kya, self._Kxa, self._Kya, self._E, self._Psi = \
+        #     kxa, kya, Kxa, Kya, E, Psi
 
         # K and K' points of the strained Brillouin zone
         self.K_bz = strained_K(self.strain, Kprime=False)
@@ -192,6 +185,25 @@ class StrainedLattice:
         Kavg = np.mean([abs(KK), abs(KKp)], axis=0)  # Average |coordinates|
         self.K = np.sign(KK) * Kavg  # Restore signs
         self.Kp = np.sign(KKp) * Kavg
+
+
+    def calculate(self, turn_off=[]):
+        '''
+        Calculate quantities relevant for the strained lattice: Location of
+        Dirac points (defined by band minima), Hopping parameters, and brillouin
+        zone vertices.
+        turn_off: list of parameter names to turn off. For example, ['gamma3'].
+        '''
+        # Find shifted K and K' points
+        self._get_valleys()
+
+        # Calculate hopping parameters with all parameters turned on
+        self._calc_hopping(turn_off=turn_off)
+
+        # Calculate brillouin zone vertices
+        self.bz = brillouin_zone(self.strain)
+
+
 
     def plot_bz(self, ax):
         '''
