@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
+import datetime
 
 def densify(kx, ky, *args, Nkx_new=1000, Nky_new=1000):
     '''
@@ -65,3 +66,20 @@ def make_grid(xlims=[-0.35e9, .35e9], ylims=[-0.35e9, .35e9], Nx=200,
     Kx, Ky = np.meshgrid(kx, ky, indexing='ij')
 
     return kx, ky, Kx, Ky
+
+
+def print_time(d={}):
+    '''
+    Prints the current timestamp along with a dictionary of parameters values
+    and/or messages.
+
+    For example, `print_time({'Status': 'Running...', 'Delta': 2})` might print:
+        `2020-07-02 18:02:24    Status: Running...      Delta: 2`
+    '''
+    now = datetime.datetime.now()
+    s = now.strftime('%Y-%m-%d %H:%M:%S')
+    for k, v in d.items():
+        s += '\t'
+        s += '{}: {}'.format(k, v)
+
+    print(s)

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 from .hamiltonian import H_4x4
@@ -231,6 +232,7 @@ class BandStructure(Saver):
 
         Perform calculations for both valleys and interpolate to dense grid
         '''
+        self.Nkx, self.Nky = Nkx_new, Nky_new
         self.K._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
         self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
 
@@ -251,6 +253,21 @@ class BandStructure(Saver):
 
         self.K.E -= self.E0
         self.Kp.E -= self.E0
+
+
+    def save(self, path):
+        '''
+        Saves the object
+        Delta in the filename reported in meV
+
+        path: save directory
+        '''
+        filename = 'BandStructure_Nkx{:d}_Nky{:d}_Delta{:.3f}.h5'.format(
+            self.Nkx, self.Nky, self.Delta * 1e3
+        )
+        self.filename = os.path.join(path, filename)
+
+        super().save(self.filename)
 
 
 class FilledBands(Saver):
@@ -282,6 +299,7 @@ class FilledBands(Saver):
         self.n2 = n_valley_layer(K.kxa, K.kya, self.feq_K, K.Psi, layer=2)
         self.n1p = n_valley_layer(Kp.kxa, Kp.kya, self.feq_Kp, Kp.Psi, layer=1)
         self.n2p = n_valley_layer(Kp.kxa, Kp.kya, self.feq_Kp, Kp.Psi, layer=2)
+        self.n = self.n1 + self.n2 + self.n1p + self.n2p
 
         # Displacement field (V/m)
         self.D = D_field(self.bs.Delta, self.n1 + self.n1p, self.n2 + self.n2p)
@@ -295,22 +313,14 @@ class FilledBands(Saver):
         self.alpha = self.alpha_K + self.alpha_Kp
 
 
-    def get_nD(self):
-        '''
-        Calculates the total carrier density and displacement field (parameters
-        that can be tuned experimentally). The carrier density and displacement
-        field are stored in `FilledBands.n` (units m^-2) and `FilledBands.D`
-        (units V / m).
-        '''
-
-        self.n = self.n1 + self.n2 + self.n1p + self.n2p
-        self.D = D_field(self.bs.Delta, self.n1 + self.n1p, self.n2 + self.n2p)
-
-        return self.n, self.D
-
-
-    def save(self, filename):
+    def save(self, path):
         '''
         Saves the object using compression (feq mostly zero, reduce file size)
+        EF in the filename reported in meV
+
+        path: save directory
         '''
-        super().save(filename, compression=1)
+        filename = 'FilledBands_EF{:.3f}_T{:.1f}.h5'.format(self.EF*1e3, self.T)
+        self.filename = os.path.join(path, filename)
+
+        super().save(self.filename, compression=1)

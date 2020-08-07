@@ -1,5 +1,6 @@
 import numpy as np
 import h5py
+import os
 
 class Saver:
     @classmethod
@@ -65,6 +66,9 @@ class Saver:
         Saves data to a file. Use this function to wrap either `safe_hdf5` or
         `save_npz`. We currently wrap `safe_hdf5`.
         '''
+        directory = os.path.dirname(filename)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         self.save_hdf5(filename, compression=compression)
 
 
@@ -76,6 +80,8 @@ class Saver:
         compression: (int) specified as kwarg compression_opts for
             h5py.Group.create_dataset
         '''
+        self.obj_filenames = []
+
         with h5py.File(filename, 'w') as f:
             # Recursively search dictionary structure of the class
             def write_layer(group, obj):
@@ -89,7 +95,12 @@ class Saver:
                         # class (e.g. a series of FilledBands would have the
                         # same BandStructure). Be sure to save separately.
                         classes_to_skip = ['BandStructure', 'StrainedLattice']
-                        if v.__class__.__name__ in classes_to_skip:
+                        obj_class = v.__class__.__name__
+                        if obj_class in classes_to_skip:
+                            # Get the filename from the class and store it
+                            obj_filename = getattr(v, 'filename')
+                            if obj_filename not in self.obj_filenames:
+                                self.obj_filenames.append(obj_filename)
                             continue
                         # If it's a class we want to save, create a group for it
                         group2 = group.create_group(k)
@@ -102,8 +113,12 @@ class Saver:
                                                 compression_opts=compression))
                         try:
                             group.create_dataset(k, data=v, **kwargs)
-                        except: # it's probably a function (e.g. a spline)
-                            group.create_dataset(k, data=[], **kwargs)
+                        except Exception as e: # it's a string or a function?
+                            try: # list of strings?
+                                group.create_dataset(k, data=np.array(v,
+                                                                dtype='S'))
+                            except: # probably a function (e.g. a spline)
+                                group.create_dataset(k, data=[], **kwargs)
             write_layer(f, self)
 
 

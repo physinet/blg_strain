@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from numpy import sin, cos
 import matplotlib.pyplot as plt
@@ -213,3 +214,14 @@ class StrainedLattice(Saver):
         ax.add_patch(p)
         ax.plot(*self.K, 'or')
         ax.plot(*self.Kp, 'or')
+
+
+    def save(self, path):
+        '''
+        path: save directory
+        '''
+        filename = 'StrainedLattice_eps{:.3f}_theta{:.3f}.h5'.format(
+            self.eps, self.theta
+        )
+        self.filename = os.path.join(path, filename)
+        super().save(self.filename)
