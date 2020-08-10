@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 import os
+import errno
 
 class Saver:
     @classmethod
@@ -67,8 +68,13 @@ class Saver:
         `save_npz`. We currently wrap `safe_hdf5`.
         '''
         directory = os.path.dirname(filename)
-        if not os.path.exists(directory):
+        try:
             os.makedirs(directory)
+        except OSError as e:  # check if directory doesn't exist
+            if e.errno != errno.EEXIST:
+                raise
+            pass
+
         self.save_hdf5(filename, compression=compression)
 
 
