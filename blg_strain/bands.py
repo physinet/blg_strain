@@ -187,6 +187,15 @@ class Valley(Saver):
 
         # Calculate spline interpolations and dense grid
         self._get_splines()
+        self._densify(Nkx_new, Nky_new)
+
+    def _densify(self, Nkx_new=2000, Nky_new=2000):
+        '''
+        Get bands, etc. Interpolate to dense grid
+
+        Params:
+        Nkx_new, Nky_new -  passed to densify - the final density of the grid
+        '''
         self.kxa, self.kya, self.E, Pr, Pi, self.Omega, self.Mu = \
             densify(self.kxa, self.kya, self.splE, self.splPr, self.splPi,
                 self.splO, self.splM, Nkx_new=Nkx_new, Nky_new=Nky_new)
