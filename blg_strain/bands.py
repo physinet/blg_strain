@@ -147,51 +147,50 @@ def fix_first_component_sign(Psi):
     return Psi
 
 
-class Valley(Saver):
+class BandStructure(Saver):
     '''
-    Contains calcualted band structure around one Dirac point for given
+    Contains calculated band structure around the K Dirac point for given
     strained lattice and choice of interlayer asymmetry.
     '''
-    def __init__(self, sl=Saver(), window=0.1, Delta=0, valley='K'):
+    def __init__(self, sl=Saver(), window=0.1, Delta=0):
         '''
         sl: an instance of the `lattice.StrainedLattice` class
         window: region of K-space to sample (in units of 1/a0). A value of 0.1
             corresponds to 0.7 nm^-1.
         Delta: interlayer asymmetry (eV)
-        valley: either 'K' or 'Kp' - choose valley to calculate band structure
-            around. The locations of each valley are stored in sl.K and sl.Kp.
         '''
         self.sl = sl
         self.window = window
         self.Delta = Delta
-        self.valley = valley
 
 
-    def _calculate(self, Nkx=200, Nky=200, Nkx_new=2000, Nky_new=2000):
+    def calculate(self, Nkx=200, Nky=200):
         '''
-        Get bands, etc. and interpolate to dense grid
-
-        Params:
-        Nkx_new, Nky_new -  passed to densify - the final density of the grid
+        Calculate the band structure for one valley using the specified number
+        of points Nkx, Nky for the Hamiltonian. Will calculate splines that can
+        be used to interpolate to a greater density of samples.
         '''
-        # Initial calculations with the number of points given in kwargs
-        K = getattr(self.sl, self.valley)
+        K = self.sl.K
+
+        self.Nkx, self.Nky = Nkx, Nky
         kxalims = K[0] - self.window/2, K[0] + self.window/2
         kyalims = K[1] - self.window/2, K[1] + self.window/2
         self.kxa, self.kya, self.Kxa, self.Kya, self.E, self.Psi = \
             get_bands(self.sl, kxalims=kxalims, kyalims=kyalims, Nkx=Nkx,
                 Nky=Nky, Delta=self.Delta)
 
+        # Shift the zero energy point
+        self.shift_zero_energy()
+
         self.Omega, self.Mu = berry_mu(self.Kxa, self.Kya, self.sl,
                                 self.E, self.Psi)
 
-        # Calculate spline interpolations and dense grid
         self._get_splines()
-        self._densify(Nkx_new, Nky_new)
+
 
     def _densify(self, Nkx_new=2000, Nky_new=2000):
         '''
-        Get bands, etc. Interpolate to dense grid
+        Interpolate to dense grid
 
         Params:
         Nkx_new, Nky_new -  passed to densify - the final density of the grid
@@ -207,61 +206,23 @@ class Valley(Saver):
 
     def _get_splines(self):
         '''
-        (Re)calculate the spline interpolations for various quantities. This may
-        be necessary after reloading the object.
+        Calculates the spline interpolations for various quantities. Run after
+        reloading the object to recalculate the splines.
         '''
         self.splE, self.splPr, self.splPi, self.splO, self.splM = \
             get_splines(self.kxa, self.kya, self.E, self.Psi.real,
                 self.Psi.imag, self.Omega, self.Mu)
 
 
-class BandStructure(Saver):
-    '''
-    Contains calculated band structure around the Dirac points (simply labeled
-    K and K') for given strained lattice and choice of interlayer asymmetry.
-    '''
-    def __init__(self, sl=Saver(), window=0.1, Delta=0):
-        '''
-        sl: an instance of the `lattice.StrainedLattice` class
-        window: region of K-space to sample (in units of 1/a0). A value of 0.1
-            corresponds to 0.7 nm^-1.
-        Delta: interlayer asymmetry (eV)
-        '''
-        self.sl = sl
-        self.window = window
-        self.Delta = Delta
-
-        self.K = Valley(sl, window=window, Delta=Delta, valley='K')
-        self.Kp = Valley(sl, window=window, Delta=Delta, valley='Kp')
-
-
-    def calculate(self, Nkx_new=2000, Nky_new=2000):
-        '''
-        Nkx_new, Nky_new passed to densify - the final density of the grid
-
-        Perform calculations for both valleys and interpolate to dense grid
-        '''
-        self.Nkx, self.Nky = Nkx_new, Nky_new
-        self.K._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
-        self.Kp._calculate(Nkx_new=Nkx_new, Nky_new=Nky_new)
-
-        self.shift_zero_energy()
-
-
     def shift_zero_energy(self):
         '''
         Calculates a reasonable "zero" energy point. Finds the average of the
-        valence band maximum and conduction band minimum, and then averages
-        this quantity over K and K' valleys. Stored in `BandStructure.E0`.
-        The energy bands in `BandStructure.K` and `BandStructure.K` are shifted
-        such that this is now the zero energy point.
+        valence band maximum and conduction band minimum and shifts bands such
+        that this is now the zero energy point.
         '''
-        zero_K = np.mean([self.K.E[1].max(), self.K.E[2].min()])
-        zero_Kp = np.mean([self.Kp.E[1].max(), self.Kp.E[2].min()])
-        self.E0 = np.mean([zero_K, zero_Kp])
-
-        self.K.E -= self.E0
-        self.Kp.E -= self.E0
+        zero_K = np.mean([self.E[1].max(), self.E[2].min()])
+        self.E0 = zero_K
+        self.E -= self.E0
 
 
     def save(self):
@@ -299,29 +260,21 @@ class FilledBands(Saver):
 
 
     def calculate(self):
-        K = self.bs.K
-        Kp = self.bs.Kp
+        bs = self.bs
 
-        self.feq_K = feq_func(K.E, self.EF, self.T)
-        self.feq_Kp = feq_func(Kp.E, self.EF, self.T)
+        self.feq_K = feq_func(bs.E, self.EF, self.T)
 
-        # Carrier density (m^-2) (contributions from each valley and layer)
-        self.n1 = n_valley_layer(K.kxa, K.kya, self.feq_K, K.Psi, layer=1)
-        self.n2 = n_valley_layer(K.kxa, K.kya, self.feq_K, K.Psi, layer=2)
-        self.n1p = n_valley_layer(Kp.kxa, Kp.kya, self.feq_Kp, Kp.Psi, layer=1)
-        self.n2p = n_valley_layer(Kp.kxa, Kp.kya, self.feq_Kp, Kp.Psi, layer=2)
-        self.n = self.n1 + self.n2 + self.n1p + self.n2p
+        # Carrier density (m^-2) (contributions from each layer)
+        self.n1 = 2 * n_valley_layer(bs.kxa, bs.kya, self.feq_K, bs.Psi, layer=1)
+        self.n2 = 2 * n_valley_layer(bs.kxa, bs.kya, self.feq_K, bs.Psi, layer=2)
+        self.n = 2 * (self.n1 + self.n2)  # factor of 2 for valleys
 
         # Displacement field (V/m)
-        self.D = D_field(self.bs.Delta, self.n1 + self.n1p, self.n2 + self.n2p)
+        self.D = D_field(self.bs.Delta, 2 * self.n1, 2 * self.n2)
 
         # ME coefficient
-        self.alpha_K = ME_coef(K.kxa, K.kya, self.feq_K, K.splE, K.splO, K.splM,
-            self.EF)
-        self.alpha_Kp = ME_coef(Kp.kxa, Kp.kya, self.feq_Kp, Kp.splE, Kp.splO,
-            Kp.splM, self.EF)
-
-        self.alpha = self.alpha_K + self.alpha_Kp
+        self.alpha = 2 * ME_coef(bs.kxa, bs.kya, self.feq_K, bs.splE, bs.splO,
+            bs.splM, self.EF)  # factor of 2 for valley
 
 
     def save(self):
