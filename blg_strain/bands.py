@@ -259,12 +259,12 @@ class FilledBands(Saver):
         self.T = T
 
 
-    def calculate(self, Nkx_new=2000, Nky_new=2000):
+    def calculate(self, Nkx=2000, Nky=2000):
         '''
         Calculate carrier density, displacement field, and magnetoelectric
         coefficient from the given band structure, Fermi level, and temperature.
 
-        Nkx_new, NKy_new - num points to use in the grid to calculate ME coef
+        Nkx, NKy - num points to use in the grid to calculate ME coef
         '''
 
         bs = self.bs
@@ -279,9 +279,8 @@ class FilledBands(Saver):
         self.D = D_field(bs.Delta, 2 * self.n1, 2 * self.n2)
 
         # ME coefficient with factor of 2 for valley - use dense grid
-        self.Nkx_new, self.Nky_new = Nkx_new, Nky_new
-        self.kxa, self.kya, = densify(bs.kxa, bs.kya, Nkx_new=Nkx_new,
-            Nky_new=Nky_new)
+        self.Nkx, self.Nky = Nkx, Nky
+        self.kxa, self.kya, = densify(bs.kxa, bs.kya, Nkx_new=Nkx, Nky_new=Nky)
         self.alpha = 2 * ME_coef(self.kxa, self.kya, bs.splE, bs.splO, bs.splM,
             self.EF)
 
@@ -295,7 +294,9 @@ class FilledBands(Saver):
         class.
         '''
         path = os.path.splitext(self.bs.filename)[0]
-        filename = 'FilledBands_EF{:.3f}_T{:.1f}.h5'.format(self.EF*1e3, self.T)
+        filename = 'FilledBands_Nkx{:d}_Nky{:d}_EF{:.3f}_T{:.1f}.h5'.format(
+            self.Nkx, self.Nky, self.EF*1e3, self.T
+        )
         self.filename = os.path.join(path, filename)
 
         super().save(self.filename, compression=None)
