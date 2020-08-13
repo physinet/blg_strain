@@ -245,13 +245,13 @@ class BandStructure(Saver):
 class FilledBands(Saver):
     '''
     Class to contain information derived from a band structure given a specified
-    Fermi level E_F and temperature T.
+    Fermi level EF and temperature T.
     '''
     def __init__(self, bs=Saver(), EF=0, T=0):
         '''
         Parameters:
         - bs: an instance of the `BandStructure` class
-        - EF: Fermi energy relative to the center of the band gap.
+        - EF: Fermi level relative to the center of the band gap.
         - T: Temperature (K)
         '''
         self.bs = bs
@@ -259,27 +259,36 @@ class FilledBands(Saver):
         self.T = T
 
 
-    def calculate(self):
-        bs = self.bs
+    def calculate(self, Nkx_new=2000, Nky_new=2000):
+        '''
+        Calculate carrier density, displacement field, and magnetoelectric
+        coefficient from the given band structure, Fermi level, and temperature.
 
-        self.feq_K = feq_func(bs.E, self.EF, self.T)
+        Nkx_new, NKy_new - num points to use in the grid to calculate ME coef
+        '''
+
+        bs = self.bs
+        feq_K = feq_func(bs.E, self.EF, self.T)
 
         # Carrier density (m^-2) (contributions from each layer)
-        self.n1 = 2 * n_valley_layer(bs.kxa, bs.kya, self.feq_K, bs.Psi, layer=1)
-        self.n2 = 2 * n_valley_layer(bs.kxa, bs.kya, self.feq_K, bs.Psi, layer=2)
+        self.n1 = 2 * n_valley_layer(bs.kxa, bs.kya, feq_K, bs.Psi, layer=1)
+        self.n2 = 2 * n_valley_layer(bs.kxa, bs.kya, feq_K, bs.Psi, layer=2)
         self.n = 2 * (self.n1 + self.n2)  # factor of 2 for valleys
 
         # Displacement field (V/m)
-        self.D = D_field(self.bs.Delta, 2 * self.n1, 2 * self.n2)
+        self.D = D_field(bs.Delta, 2 * self.n1, 2 * self.n2)
 
-        # ME coefficient
-        self.alpha = 2 * ME_coef(bs.kxa, bs.kya, self.feq_K, bs.splE, bs.splO,
-            bs.splM, self.EF)  # factor of 2 for valley
+        # ME coefficient with factor of 2 for valley - use dense grid
+        self.Nkx_new, self.Nky_new = Nkx_new, Nky_new
+        self.kxa, self.kya, = densify(bs.kxa, bs.kya, Nkx_new=Nkx_new,
+            Nky_new=Nky_new)
+        self.alpha = 2 * ME_coef(self.kxa, self.kya, bs.splE, bs.splO, bs.splM,
+            self.EF)
 
 
     def save(self):
         '''
-        Saves the object using compression (feq mostly zero, reduce file size)
+        Saves the object.
         EF in the filename reported in meV
 
         This will be saved in a subdirectory named after the BandStructure
@@ -289,4 +298,4 @@ class FilledBands(Saver):
         filename = 'FilledBands_EF{:.3f}_T{:.1f}.h5'.format(self.EF*1e3, self.T)
         self.filename = os.path.join(path, filename)
 
-        super().save(self.filename, compression=1)
+        super().save(self.filename, compression=None)

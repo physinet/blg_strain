@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import simps
 from scipy.interpolate import RectBivariateSpline
 
-from .microscopic import check_f_boundaries
+from .microscopic import check_f_boundaries, feq_func
 from .utils.const import q, hbar, hbar_J, muB, mu0, eps0, d, a0
 
 def n_valley_layer(kxa, kya, feq, Psi, layer=1):
@@ -119,7 +119,7 @@ def D_field(Delta, nt, nb):
     return D  # V/m
 
 
-def _ME_coef_integral(kxa, kya, feq, splE, splO, splM, EF=0):
+def _ME_coef_integral(kxa, kya, splE, splO, splM, EF=0, T=0):
     '''
     Integrates over k space as part of the calculation for magnetoelectric
     coefficient for one valley and one band. This quantity is dimensionless
@@ -129,15 +129,19 @@ def _ME_coef_integral(kxa, kya, feq, splE, splO, splM, EF=0):
 
     Parameters:
     - kxa, kya: Nkx, Nky arrays of kxa, kya points
-    - feq: Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
         moment) for the given band
     - EF: Fermi energy (eV)
+    - T: Temperature (K)
 
     Returns:
     - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
     E = splE(kxa, kya)
+    feq = feq_func(E, EF=EF, T=T)
+    if (np.abs(feq).max() < 1e-4):  # Band unoccupied!
+        return 0
+
     O = splO(kxa, kya)
     Mu = splM(kxa, kya)
 
@@ -149,13 +153,13 @@ def _ME_coef_integral(kxa, kya, feq, splE, splO, splM, EF=0):
     f = a0 * q * mu0  / (hbar_J) * np.array(np.gradient(feq, kxa, kya,
                                                         axis=(-2, -1)))
 
-    integrand = 1 / (2 * np.pi * a0) **2 * f * (Mu + q * O / hbar * (EF - E))
+    integrand = 1 / (2 * np.pi * a0) ** 2 * f * (Mu + q * O / hbar * (EF - E))
 
     integral = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
     return integral
 
 
-def _ME_coef_integral_by_parts(kxa, kya, feq, splE, splO, splM, EF=0):
+def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0):
     '''
     Integrates over k space as part of the calculation for magnetoelectric
     coefficient for one valley and one band. This quantity is dimensionless
@@ -168,7 +172,6 @@ def _ME_coef_integral_by_parts(kxa, kya, feq, splE, splO, splM, EF=0):
 
     Parameters:
     - kxa, kya: Nkx, Nky arrays of kxa, kya points
-    - feq: Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
         moment) for the given band
     - EF: Fermi energy (eV)
@@ -177,6 +180,10 @@ def _ME_coef_integral_by_parts(kxa, kya, feq, splE, splO, splM, EF=0):
     - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
     E = splE(kxa, kya)
+    feq = feq_func(E, EF=EF, T=T)
+    if (np.abs(feq).max() < 1e-4):  # Band unoccupied!
+        return 0
+
     O = splO(kxa, kya)
     Mu = splM(kxa, kya)
 
@@ -189,7 +196,7 @@ def _ME_coef_integral_by_parts(kxa, kya, feq, splE, splO, splM, EF=0):
     prefactor = - a0 * q * mu0 / (hbar_J) / (2 * np.pi * a0) ** 2 * feq
     # prefactor = - q / (hbar_J * mu0) / (2 * np.pi) ** 2 * feq
     integrand = prefactor * (Mu_grad  \
-                     + q / hbar * O_grad * (EF - E)\
+                     + q / hbar * O_grad * (EF - E) \
                      - q / hbar * O * E_grad
     )
 
@@ -198,7 +205,7 @@ def _ME_coef_integral_by_parts(kxa, kya, feq, splE, splO, splM, EF=0):
     return integral
 
 
-def ME_coef(kxa, kya, feq, splE, splO, splM, EF=0, byparts=True):
+def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True):
     '''
     Calculates the integral for ME coefficient for each of four bands and sums
     over bands. To calculate magnetization, compute the dot product with an
@@ -207,10 +214,10 @@ def ME_coef(kxa, kya, feq, splE, splO, splM, EF=0, byparts=True):
 
     Parameters:
     - kxa, kya: Nkx, Nky arrays of kxa, kya points
-    - feq: N(=4) x Nkx x Nky array of equilibrium occupation
     - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
         / magnetic moment) in each band
     - EF: Fermi energy (eV)
+    - T: Temperature (K)
     - byparts: if True, will use the "integration by parts" version of the
         integral (function `_M_integral_by_parts`). If False, will use the
         function `_M_integral`
@@ -218,8 +225,8 @@ def ME_coef(kxa, kya, feq, splE, splO, splM, EF=0, byparts=True):
     Returns:
     - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
-    N = feq.shape[0]
-    alpha = np.zeros((N, 2))  # second dim is two components of integrand
+    N = len(splE)  # number of bands
+    alpha = np.zeros((N, 2))  # (number of bands) x (x, y)
 
     if byparts:
         integral = _ME_coef_integral_by_parts
@@ -227,9 +234,6 @@ def ME_coef(kxa, kya, feq, splE, splO, splM, EF=0, byparts=True):
         integral = _ME_coef_integral
 
     for i in range(N):
-        if (np.abs(feq[i]).max() < 1e-4):  # Band unoccupied!
-            continue  # Don't bother calculating the magnetization - it is zero.
-
-        alpha[i] = integral(kxa, kya, feq[i], splE[i], splO[i], splM[i], EF=EF)
+        alpha[i] = integral(kxa, kya, splE[i], splO[i], splM[i], EF=EF, T=T)
 
     return alpha.sum(axis=0)  # sum over bands

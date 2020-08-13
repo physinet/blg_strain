@@ -1,6 +1,35 @@
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 import datetime
+from .saver import Saver
+
+class Spline(RectBivariateSpline, Saver):
+    '''
+    Custom Spline class to enable saving and loading
+    '''
+    def __init__(self):
+        pass
+
+    def calculate(self, x, y, z):
+        super().__init__(x,y,z)
+
+    def save(self, filename):
+        '''
+        Extract spline parameters information from the `tck` tuple to enable
+        saving as individual arrays
+        '''
+        self.tx, self.ty, self.c = self.tck
+        super().save(filename)
+
+    @classmethod
+    def load(cls, filename):
+        '''
+        Load `Spline` object and reconstruct `tck` parameter
+        '''
+        obj = super().load(filename)
+        obj.tck = obj.tx, obj.ty, obj.c
+        return obj
+
 
 def densify(kx, ky, *args, Nkx_new=1000, Nky_new=1000):
     '''
@@ -50,7 +79,9 @@ def get_splines(kx, ky, *args):
 
         # iterate over all but last two dimensions
         for idx in np.ndindex(arg.shape[:-2]):
-            splines[i][idx] = RectBivariateSpline(kx, ky, arg[idx])
+            s = Spline()
+            s.calculate(kx, ky, arg[idx])
+            splines[i][idx] = s
 
     if len(splines) == 1:
         return splines[0]

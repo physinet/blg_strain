@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 import os
 import errno
+import pickle
 
 class Saver:
     @classmethod
@@ -55,17 +56,26 @@ class Saver:
                     if isinstance(v, h5py.Group): # is a group
                         obj.__dict__[k] = read_layer(v)
                     else:
-                        obj.__dict__[k] = v[()] # [()] gets values from Dataset
+                        v = v[()] # [()] gets values from Dataset
+                        if type(v) is np.bytes_:
+                            try:
+                                v = pickle.loads(v)  # load pickled Splines
+                            except:
+                                pass
+                        obj.__dict__[k] = v
+
                 return obj
             obj = read_layer(f)
 
         return obj
 
 
-    def save(self, filename, compression=None):
+    def save(self, filename, **kwargs):
         '''
-        Saves data to a file. Use this function to wrap either `safe_hdf5` or
-        `save_npz`. We currently wrap `safe_hdf5`.
+        Saves data to a file. Use this function to wrap either `save_hdf5` or
+        `save_npz`. We currently wrap `save_hdf5`.
+
+        kwargs passed to save_hdf5
         '''
         directory = os.path.dirname(filename)
         try:
@@ -75,16 +85,17 @@ class Saver:
                 raise
             pass
 
-        self.save_hdf5(filename, compression=compression)
+        self.save_hdf5(filename, **kwargs)
 
 
-    def save_hdf5(self, filename, compression=None):
+    def save_hdf5(self, filename, compression=None, skip=[]):
         '''
         Saves data to a compressed .h5 file
 
         filename: full path of destination file
         compression: (int) specified as kwarg compression_opts for
             h5py.Group.create_dataset
+        skip: list of attributes that will not be saved
         '''
         self.obj_filenames = []
 
@@ -95,6 +106,10 @@ class Saver:
                                              obj.__class__.__name__)
                 group.attrs['class'] = classname
                 for k, v in obj.__dict__.items():
+                    # Ignore attributes in `skip`
+                    if k in skip:
+                        continue
+
                     # Find objects
                     if hasattr(v, '__dict__'): # objects have __dict__
                         # Some objects are common to multiple instances of a
@@ -120,10 +135,10 @@ class Saver:
                         try:
                             group.create_dataset(k, data=v, **kwargs)
                         except Exception as e: # it's a string or a function?
-                            try: # list of strings?
-                                group.create_dataset(k, data=np.array(v,
-                                                                dtype='S'))
-                            except: # probably a function (e.g. a spline)
+                            try:  # try pickling
+                                s = pickle.dumps(v)
+                                group.create_dataset(k, data=np.array(s))
+                            except:
                                 group.create_dataset(k, data=[], **kwargs)
             write_layer(f, self)
 
