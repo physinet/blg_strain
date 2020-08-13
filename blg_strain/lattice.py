@@ -220,8 +220,18 @@ class StrainedLattice(Saver):
         '''
         path: base directory for all saved data files
         '''
-        filename = 'StrainedLattice_eps{:.3f}_theta{:.3f}.h5'.format(
-            self.eps, self.theta
+        i=0
+        filename = 'StrainedLattice_eps{:.3f}_theta{:.3f}_Run{:d}.h5'.format(
+            self.eps, self.theta, i
         )
         self.filename = os.path.join(path, filename)
+
+        # Increment run number until filename is unique
+        while os.path.exists(self.filename):
+            i += 1
+            filename = 'StrainedLattice_eps{:.3f}_theta{:.3f}_Run{:d}.h5'.format(
+                self.eps, self.theta, i
+            )
+            self.filename = os.path.join(path, filename)
+
         super().save(self.filename)
