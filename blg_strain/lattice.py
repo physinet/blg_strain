@@ -12,6 +12,7 @@ from .utils.const import K, deltas, deltans, nu, eta0, eta3, eta4, etan, hbar, \
                             gamma0, gamma3, gamma4, gamman, dimer
 from .bands import get_bands
 from .utils.saver import Saver
+from .utils.utils import make_grid
 
 I = np.eye(2)
 
@@ -163,10 +164,9 @@ class StrainedLattice(Saver):
         # Calculate band structure with Delta = 0 and some hoppings turned off
         self._calc_hopping(turn_off=['gamma3', 'gamma4', 'gamman', 'dimer'])
 
-        kxa, kya, Kxa, Kya, E, Psi = get_bands(self, kxalims=[-1.2*K, 1.2*K],
-            kyalims=[-1.2*K, 1.2*K], Nkx=200, Nky=200)
-        # self._kxa, self._kya, self._Kxa, self._Kya, self._E, self._Psi = \
-        #     kxa, kya, Kxa, Kya, E, Psi
+        lims = [-1.2 * K, 1.2 * K]
+        kxa, kya, Kxa, Kya = make_grid(lims, lims, 200, 200)
+        E, Psi = get_bands(Kxa, Kya, self)
 
         # K and K' points of the strained Brillouin zone
         self.K_bz = strained_K(self.strain, Kprime=False)

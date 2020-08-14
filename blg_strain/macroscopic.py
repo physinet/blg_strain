@@ -159,7 +159,7 @@ def _ME_coef_integral(kxa, kya, splE, splO, splM, EF=0, T=0):
     return integral
 
 
-def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0):
+def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0, dy=True):
     '''
     Integrates over k space as part of the calculation for magnetoelectric
     coefficient for one valley and one band. This quantity is dimensionless
@@ -175,6 +175,8 @@ def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0):
     - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
         moment) for the given band
     - EF: Fermi energy (eV)
+    - T: Temperature (K)
+    - dy: if False, assumes the y component integrates to zero (may speed up)
 
     Returns:
     - a length-2 array of x/y components of the dimensionless ME coefficient
@@ -185,26 +187,39 @@ def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0):
         return 0
 
     O = splO(kxa, kya)
-    Mu = splM(kxa, kya)
+    # Mu = splM(kxa, kya)
 
-    E_grad = np.array([splE(kxa, kya, dx=1), splE(kxa, kya, dy=1)])
-    O_grad = np.array([splO(kxa, kya, dx=1), splO(kxa, kya, dy=1)])
-    Mu_grad = np.array([splM(kxa, kya, dx=1), splM(kxa, kya, dy=1)])
+    E_dx = splE(kxa, kya, dx=1)
+    O_dx = splO(kxa, kya, dx=1)
+    Mu_dx = splM(kxa, kya, dx=1)
 
     # note prefactor hbar is in J * s
     # factors of a0 to take care of integration and gradient w.r.t. k*a
     prefactor = - a0 * q * mu0 / (hbar_J) / (2 * np.pi * a0) ** 2 * feq
-    integrand = prefactor * (Mu_grad  \
-                     + q / hbar * O_grad * (EF - E) \
-                     - q / hbar * O * E_grad
-    )
+    integrand = prefactor * (Mu_dx  \
+                     + q / hbar * O_dx * (EF - E) \
+                     - q / hbar * O * E_dx
+                     )
 
-    integral = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
+    integralx = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
 
-    return integral
+    if dy:
+        E_dy = splE(kxa, kya, dy=1)
+        O_dy = splO(kxa, kya, dy=1)
+        Mu_dy = splM(kxa, kya, dy=1)
+
+        integrand = prefactor * (Mu_dy  \
+                         + q / hbar * O_dy * (EF - E) \
+                         - q / hbar * O * E_dy
+                         )
+        integraly = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
+    else:
+        integraly = np.zeros_like(integralx)
+
+    return np.array([integralx, integraly])
 
 
-def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True):
+def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True, dy=True):
     '''
     Calculates the integral for ME coefficient for each of four bands and sums
     over bands. To calculate magnetization, compute the dot product with an
@@ -220,6 +235,8 @@ def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True):
     - byparts: if True, will use the "integration by parts" version of the
         integral (function `_M_integral_by_parts`). If False, will use the
         function `_M_integral`
+    - dy: if False, assumes the y component integrates to zero (speeds up calc)
+
 
     Returns:
     - a length-2 array of x/y components of the dimensionless ME coefficient
@@ -233,6 +250,7 @@ def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True):
         integral = _ME_coef_integral
 
     for i in range(N):
-        alpha[i] = integral(kxa, kya, splE[i], splO[i], splM[i], EF=EF, T=T)
+        alpha[i] = integral(kxa, kya, splE[i], splO[i], splM[i], EF=EF, T=T,
+            dy=dy)
 
     return alpha.sum(axis=0)  # sum over bands

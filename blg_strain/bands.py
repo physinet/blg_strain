@@ -11,44 +11,10 @@ from .utils.const import K, a0
 from .utils.saver import Saver
 
 
-def get_bands(sl, kxalims=[-1.2 * K, 1.2 * K], kyalims=[-1.2 * K, 1.2 * K],
-                Nkx=200, Nky=200, Delta=0, ham='4x4', eigh=False):
+def get_bands(Kxa, Kya, sl, eigh=True, ham='4x4', **params):
     '''
     Calculate energy eigenvalues and eigenvectors for a rectangular window of
     k-space.
-
-    Parameters:
-    - sl: instance of the StrainedLattice class
-    - kxalims, kyalims: length-2 arrays of min and max wave vectors (units 1/a0)
-        By default, covers the entire Brillouin zone (with a little extra)
-    - Nkx, Nky: number of k points in each dimension
-    - Delta: interlayer asymmetry (eV)
-    - ham: str or array - Select choice of Hamiltonian with a string
-        (choice is only '4x4' for now) or pass precompuuted array consistent
-        with the arrays made with `make_grid(kxlims, kylims, Nkx, Nky)`.
-        Shape is N x N (x Nkx x Nky), where the last two dimensions are included
-        if the Hamiltonian varies with kx and ky.
-    - eigh: if True, use `np.linalg.eigh`; if False use `np.linalg.eig`
-
-    Returns:
-    - kxa, kya: Nkx, Nky arrays of kx, ky points
-    - Kxa, Kya: Nkx x Nky meshgrid of kx, ky points (note: we use `ij` indexing
-        compatible with scipy spline interpolation methods)
-    - E: N(=4) x Nkx x Nky array of energy eigenvalues
-    - Psi: N(=4) x N(=4) x Nkx x Nky array of eigenvectors
-    '''
-    kxa, kya, Kxa, Kya = make_grid(kxalims, kyalims, Nkx, Nky)
-
-    E, Psi = _get_bands(Kxa, Kya, sl, Delta=Delta, ham=ham,
-                        eigh=eigh)
-
-    return kxa, kya, Kxa, Kya, E, Psi
-
-
-def _get_bands(Kxa, Kya, sl, eigh=True, ham='4x4', **params):
-    '''
-    Calculate energy eigenvalues and eigenvectors for a rectangular window of
-    k-space. This function is wrapped by `blg_strain.bands.get_bands`.
 
     Parameters:
     - Kxa, Kya: Nkx x Nky meshgrid of kx, ky points (using 'ij' indexing)
@@ -164,20 +130,27 @@ class BandStructure(Saver):
         self.Delta = Delta
 
 
-    def calculate(self, Nkx=200, Nky=200):
+    def calculate(self, Nkx=200, Nky=200, valley='K'):
         '''
         Calculate the band structure for one valley using the specified number
         of points Nkx, Nky for the Hamiltonian. Will calculate splines that can
         be used to interpolate to a greater density of samples.
+
+        - Nkx, Nky: number of points used in grid to calculate band structure
+        - Valley: either 'K' or 'Kp' - which valley to use for the calculation
         '''
-        K = self.sl.K
+        assert valley in ['K', 'Kp']
+        self.valley = valley
+        K = getattr(self.sl, valley)
 
         self.Nkx, self.Nky = Nkx, Nky
         kxalims = K[0] - self.window/2, K[0] + self.window/2
         kyalims = K[1] - self.window/2, K[1] + self.window/2
-        self.kxa, self.kya, self.Kxa, self.Kya, self.E, self.Psi = \
-            get_bands(self.sl, kxalims=kxalims, kyalims=kyalims, Nkx=Nkx,
-                Nky=Nky, Delta=self.Delta)
+        self.kxa, self.kya, self.Kxa, self.Kya  = make_grid(kxalims, kyalims,
+                                                            Nkx, Nky)
+        self.E, self.Psi = get_bands(self.Kxa, self.Kya, self.sl,
+                                Delta=self.Delta, ham='4x4', eigh=True)
+
 
         # Shift the zero energy point
         self.shift_zero_energy()
@@ -278,11 +251,16 @@ class FilledBands(Saver):
         # Displacement field (V/m)
         self.D = D_field(bs.Delta, 2 * self.n1, 2 * self.n2)
 
-        # ME coefficient with factor of 2 for valley - use dense grid
+        # Make dense grid
         self.Nkx, self.Nky = Nkx, Nky
         self.kxa, self.kya, = densify(bs.kxa, bs.kya, Nkx_new=Nkx, Nky_new=Nky)
+
+        # ME coefficient with factor of 2 for valley
+        # Skips calculating y component if strain is along major crystal axis
+        dy = self.bs.sl.theta not in (0, np.pi/2)
+        # dy = True  # Always calculate y component
         self.alpha = 2 * ME_coef(self.kxa, self.kya, bs.splE, bs.splO, bs.splM,
-            self.EF)
+            self.EF, self.T, dy=dy)
 
 
     def save(self):
