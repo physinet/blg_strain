@@ -1,8 +1,63 @@
 import numpy as np
 import h5py
 import os
+import glob
 import errno
 import pickle
+
+def load(path, parameters_only=False):
+    '''
+    Returns values of Delta, EF, n, D, and alpha from one run of calculations.
+    If parameters_only is True, will only return Delta and EF. This operation
+    is fast and does not require loading the data.
+    The path should point to the base directory associated with the run,
+    named something to the effect of:
+    `StrainedLattice_eps0.010_theta0.100_Run3`
+
+    Returns:
+    - Deltas, EFs, [ns, Ds, alphas]
+    '''
+
+    bs_paths = glob.glob(path + r'\BandStructure*.h5')  # Find all BandStructure files
+    bs_paths.sort(key=os.path.getmtime)
+
+    # All bs_paths have the same EF series; use the last bs_path
+    fb_paths = glob.glob(bs_paths[-1][:-3] + '\FilledBands*.h5')
+    fb_paths.sort(key=os.path.getmtime)
+
+    Deltas = np.empty(len(bs_paths))
+    EFs = np.empty(len(fb_paths))
+    ns = np.empty((len(Deltas), len(EFs)))
+    Ds = np.empty((len(Deltas), len(EFs)))
+    alphas = np.empty((len(Deltas), len(EFs), 2))
+
+    for i, bs_path in enumerate(bs_paths):
+        start = bs_path.find('_Delta') + 6  # Start of Delta value
+        end = bs_path.find('.h5')  # end of Delta value
+        Deltas[i] = float(bs_path[start:end])  # extract value
+
+        fb_paths = glob.glob(bs_path[:-3] + '\FilledBands*.h5')
+        fb_paths.sort(key=os.path.getmtime)
+
+        for j, fb_path in enumerate(fb_paths):
+            start = fb_path.find('_EF') + 3  # start of EF value
+            end = fb_path.find('_T') # end of EF value
+            EFs[j] = float(fb_path[start:end])
+
+            if parameters_only:
+                continue
+            if not parameters_only:
+                from ..bands import FilledBands
+
+                fb = FilledBands.load(fb_path)
+                alphas[i,j] = fb.alpha
+                ns[i,j] = fb.n
+                Ds[i,j] = fb.D
+
+    if parameters_only:
+        return Deltas, EFs
+    return Deltas, EFs, ns, Ds, alphas
+
 
 class Saver:
     @classmethod

@@ -212,7 +212,8 @@ class BandStructure(Saver):
         )
         self.filename = os.path.join(path, filename)
 
-        super().save(self.filename)
+        skip = ['E', 'Omega', 'Mu', 'Psi']
+        super().save(self.filename, skip=skip)
 
 
 class FilledBands(Saver):
