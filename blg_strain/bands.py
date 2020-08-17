@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from scipy.optimize import root
 
 from .hamiltonian import H_4x4
 from .berry import berry_mu
@@ -189,12 +190,23 @@ class BandStructure(Saver):
 
     def shift_zero_energy(self):
         '''
-        Calculates a reasonable "zero" energy point. Finds the average of the
-        valence band maximum and conduction band minimum and shifts bands such
-        that this is now the zero energy point.
+        Calculates the zero energy point such that the net carrier density at
+        EF = 0 is zero at zero temperature. Shifts the bands by an amount
+        `self.E0` corresponding to this calculated zero energy point.
         '''
-        zero_K = np.mean([self.E[1].max(), self.E[2].min()])
-        self.E0 = zero_K
+        # initial guess from average of conduction and valence band extrema
+        E0 = np.mean([self.E[1].max(), self.E[2].min()])
+
+        def n(EF):
+            feq_K = feq_func(self.E, EF, T=0)
+            # Factor of 2 for valley
+            n1 = 2*n_valley_layer(self.kxa, self.kya, feq_K, self.Psi, layer=1)
+            n2 = 2*n_valley_layer(self.kxa, self.kya, feq_K, self.Psi, layer=2)
+
+            return (n1 + n2) / 1e16  # more natural units for solver
+
+        result = root(n, E0)
+        self.E0 = result.x
         self.E -= self.E0
 
 
@@ -245,9 +257,10 @@ class FilledBands(Saver):
         feq_K = feq_func(bs.E, self.EF, self.T)
 
         # Carrier density (m^-2) (contributions from each layer)
+        # factor of 2 for valleys
         self.n1 = 2 * n_valley_layer(bs.kxa, bs.kya, feq_K, bs.Psi, layer=1)
         self.n2 = 2 * n_valley_layer(bs.kxa, bs.kya, feq_K, bs.Psi, layer=2)
-        self.n = 2 * (self.n1 + self.n2)  # factor of 2 for valleys
+        self.n = self.n1 + self.n2
 
         # Displacement field (V/m)
         self.D = D_field(bs.Delta, 2 * self.n1, 2 * self.n2)
@@ -258,7 +271,10 @@ class FilledBands(Saver):
 
         # ME coefficient with factor of 2 for valley
         # Skips calculating y component if strain is along major crystal axis
-        dy = self.bs.sl.theta not in (0, np.pi/2)
+        if hasattr(self.bs.sl, 'theta'):
+            dy = self.bs.sl.theta not in (0, np.pi/2)
+        else:
+            dy = True
         # dy = True  # Always calculate y component
         self.alpha = 2 * ME_coef(self.kxa, self.kya, bs.splE, bs.splO, bs.splM,
             self.EF, self.T, dy=dy)

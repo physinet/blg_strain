@@ -33,8 +33,8 @@ def load(path, parameters_only=False, load_summary=True):
     bs_paths = glob.glob(path + r'\BandStructure*.h5')  # Find all BandStructure files
     bs_paths.sort(key=os.path.getmtime)
 
-    # All bs_paths have the same EF series; use the last bs_path
-    fb_paths = glob.glob(bs_paths[-1][:-3] + '\FilledBands*.h5')
+    # All bs_paths have the same EF series; use the first bs_path
+    fb_paths = glob.glob(bs_paths[0][:-3] + '\FilledBands*.h5')
     fb_paths.sort(key=os.path.getmtime)
 
     Deltas = np.empty(len(bs_paths))
@@ -46,6 +46,7 @@ def load(path, parameters_only=False, load_summary=True):
     for i, bs_path in enumerate(bs_paths):
         start = bs_path.find('_Delta') + 6  # Start of Delta value
         end = bs_path.find('.h5')  # end of Delta value
+
         Deltas[i] = float(bs_path[start:end])  # extract value
 
         fb_paths = glob.glob(bs_path[:-3] + '\FilledBands*.h5')

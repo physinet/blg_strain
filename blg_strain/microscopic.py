@@ -16,8 +16,11 @@ def feq_func(E, EF, T=0):
 
     with np.errstate(divide='ignore', over='ignore'):
         f = 1 / (1 + np.exp((E - EF) / (kB * T)))
-    f[E < 0] = -(1 - f[E < 0])  # hole occupation is 1-f, and we give it a (-)
-                              # so they contribute as (-) to carrier density
+
+    if f.ndim == 3:  # bands x kx x ky
+        if f.shape[0] == 4:
+            f[:2] = -(1 - f[:2])  # convert hole bands to hole occupation
+                                  # holes contribute (-) to carrier density
 
     return f
 
