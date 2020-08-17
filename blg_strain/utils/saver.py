@@ -5,18 +5,30 @@ import glob
 import errno
 import pickle
 
-def load(path, parameters_only=False):
+def load(path, parameters_only=False, load_summary=True):
     '''
     Returns values of Delta, EF, n, D, and alpha from one run of calculations.
-    If parameters_only is True, will only return Delta and EF. This operation
-    is fast and does not require loading the data.
-    The path should point to the base directory associated with the run,
-    named something to the effect of:
-    `StrainedLattice_eps0.010_theta0.100_Run3`
+    If a `summary.h5` file does not exist under the given path, this function
+    will create a `Saver` object with the quantities extracted from the saved
+    `FilledBands` files and save it to `summary.h5`. If this file does exist,
+    this function instead loads directly from the summary file (to save time)
+    unless `load_summary` is False.
+
+    Parameters:
+    - path: base directory associated with the run (e.g. `StrainedLattice_eps0.010_theta0.100_Run3`)
+    - parameters_only: if True, only return Delta and EF (faster)
+    - load_summary: if True, attempt to load from a `summary.h5` file rather
+        than loading each `FilledBands`.
 
     Returns:
     - Deltas, EFs, [ns, Ds, alphas]
     '''
+
+    if load_summary:
+        filename = os.path.join(path, 'summary.h5')
+        if os.path.exists(filename):
+            s = Saver.load(filename)
+            return s.Deltas, s.EFs, s.ns, s.Ds, s.alphas
 
     bs_paths = glob.glob(path + r'\BandStructure*.h5')  # Find all BandStructure files
     bs_paths.sort(key=os.path.getmtime)
@@ -54,8 +66,18 @@ def load(path, parameters_only=False):
                 ns[i,j] = fb.n
                 Ds[i,j] = fb.D
 
+    s = Saver()
+    s.Deltas = Deltas
+    s.EFs = EFs
+    s.ns = ns
+    s.Ds = Ds
+    s.alphas = alphas
+
+    filename = os.path.join(path, 'summary.h5')
+    s.save(filename)
+
     if parameters_only:
-        return Deltas, EFs
+        return Deltas, EFs, None, None, None
     return Deltas, EFs, ns, Ds, alphas
 
 
