@@ -199,6 +199,10 @@ class BandStructure(Saver):
 
         def n(EF):
             feq_K = feq_func(self.E, EF, T=0)
+
+            # Convert hole bands to hole occupation
+            feq_K[:2] = -(1 - feq_K[:2])  # holes contribute (-) to carrier density
+
             # Factor of 2 for valley
             n1 = 2*n_valley_layer(self.kxa, self.kya, feq_K, self.Psi, layer=1)
             n2 = 2*n_valley_layer(self.kxa, self.kya, feq_K, self.Psi, layer=2)
@@ -255,6 +259,8 @@ class FilledBands(Saver):
 
         bs = self.bs
         feq_K = feq_func(bs.E, self.EF, self.T)
+        # Convert hole bands to hole occupation
+        feq_K[:2] = -(1 - feq_K[:2])  # holes contribute (-) to carrier density
 
         # Carrier density (m^-2) (contributions from each layer)
         # factor of 2 for valleys

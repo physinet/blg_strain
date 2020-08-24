@@ -6,7 +6,9 @@ from scipy.interpolate import RectBivariateSpline
 
 def feq_func(E, EF, T=0):
     '''
-    Fermi-Dirac distribution for calculating electron or hole occupation
+    Fermi-Dirac distribution for equilibrium electron occupation feq. To
+    determine hole occupation, take -(1-feq) (such that carrier density is
+    negative for hole doping).
 
     Arguments:
     - E: Energy (eV) - an array with arbitrary dimensions
@@ -16,11 +18,6 @@ def feq_func(E, EF, T=0):
 
     with np.errstate(divide='ignore', over='ignore'):
         f = 1 / (1 + np.exp((E - EF) / (kB * T)))
-
-    if f.ndim == 3:  # bands x kx x ky
-        if f.shape[0] == 4:
-            f[:2] = -(1 - f[:2])  # convert hole bands to hole occupation
-                                  # holes contribute (-) to carrier density
 
     return f
 

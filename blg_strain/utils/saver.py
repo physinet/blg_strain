@@ -22,6 +22,7 @@ def load(path, parameters_only=False, load_summary=True):
 
     Returns:
     - Deltas, EFs, [ns, Ds, alphas]
+    The shape of alphas is len(Deltas) x len(EFs) x 2
     '''
 
     if load_summary:

@@ -119,7 +119,45 @@ def D_field(Delta, nt, nb):
     return D  # V/m
 
 
-def _ME_coef_integral(kxa, kya, splE, splO, splM, EF=0, T=0):
+def integrand_by_parts(kxa, kya, splE, splO, splM, EF=0, dx=True):
+    '''
+    Returns the integrand for the integral by parts (before multiplying by
+    Fermi occupation)
+
+    Parameters:
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
+    - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
+        moment) for the given band
+    - feq: N(=4) x Nkx x Nky array of occupation for valley K
+    - EF: Fermi level (eV)
+    - dx: If True (False), derivative is with respect to x (y)
+
+    Returns:
+    - integrand: N(=4) x Nkx x Nky array of integrand for valley K
+    '''
+    E = splE(kxa, kya)
+    O = splO(kxa, kya)
+
+    if dx:
+        E_dx = splE(kxa, kya, dx=1)
+        O_dx = splO(kxa, kya, dx=1)
+        Mu_dx = splM(kxa, kya, dx=1)
+    else:
+        E_dx = splE(kxa, kya, dy=1)
+        O_dx = splO(kxa, kya, dy=1)
+        Mu_dx = splM(kxa, kya, dy=1)
+
+    # note prefactor hbar is in J * s
+    # factors of a0 to take care of integration and gradient w.r.t. k*a
+    prefactor = - a0 * q * mu0 / (hbar_J) / (2 * np.pi * a0) ** 2
+    integrand = prefactor * (Mu_dx  \
+                     + q / hbar * O_dx * (EF - E) \
+                     - q / hbar * O * E_dx
+                     )
+    return integrand
+
+
+def _ME_coef_integral(kxa, kya, splE, splO, splM, EF=0, T=0, hole_band=False):
     '''
     Integrates over k space as part of the calculation for magnetoelectric
     coefficient for one valley and one band. This quantity is dimensionless
@@ -133,12 +171,18 @@ def _ME_coef_integral(kxa, kya, splE, splO, splM, EF=0, T=0):
         moment) for the given band
     - EF: Fermi energy (eV)
     - T: Temperature (K)
+    - hole_band: if True, will change to using hole occupation; feq -> -(1-feq)
 
     Returns:
     - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
     E = splE(kxa, kya)
     feq = feq_func(E, EF=EF, T=T)
+
+    # Convert hole bands to hole occupation
+    if hole_band:
+        feq = -(1 - feq)  # holes contribute (-) to carrier density
+
     if (np.abs(feq).max() < 1e-4):  # Band unoccupied!
         return 0
 
@@ -159,7 +203,8 @@ def _ME_coef_integral(kxa, kya, splE, splO, splM, EF=0, T=0):
     return integral
 
 
-def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0, dy=True):
+def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0, dy=True,
+                                hole_band=False):
     '''
     Integrates over k space as part of the calculation for magnetoelectric
     coefficient for one valley and one band. This quantity is dimensionless
@@ -177,42 +222,27 @@ def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0, dy=True):
     - EF: Fermi energy (eV)
     - T: Temperature (K)
     - dy: if False, assumes the y component integrates to zero (may speed up)
+    - hole_band: if True, will change to using hole occupation; feq -> -(1-feq)
 
     Returns:
     - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
     E = splE(kxa, kya)
     feq = feq_func(E, EF=EF, T=T)
+
+    # Convert hole bands to hole occupation
+    if hole_band:
+        feq = -(1 - feq)  # holes contribute (-) to carrier density
+
     if (np.abs(feq).max() < 1e-4):  # Band unoccupied!
-        return 0
+        return np.array([0,0])
 
-    O = splO(kxa, kya)
-    # Mu = splM(kxa, kya)
-
-    E_dx = splE(kxa, kya, dx=1)
-    O_dx = splO(kxa, kya, dx=1)
-    Mu_dx = splM(kxa, kya, dx=1)
-
-    # note prefactor hbar is in J * s
-    # factors of a0 to take care of integration and gradient w.r.t. k*a
-    prefactor = - a0 * q * mu0 / (hbar_J) / (2 * np.pi * a0) ** 2 * feq
-    integrand = prefactor * (Mu_dx  \
-                     + q / hbar * O_dx * (EF - E) \
-                     - q / hbar * O * E_dx
-                     )
-
-    integralx = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
+    integrand = integrand_by_parts(kxa, kya, splE, splO, splM, EF=EF, dx=True)
+    integralx = simps(simps(feq * integrand, kya, axis=-1), kxa, axis=-1)
 
     if dy:
-        E_dy = splE(kxa, kya, dy=1)
-        O_dy = splO(kxa, kya, dy=1)
-        Mu_dy = splM(kxa, kya, dy=1)
-
-        integrand = prefactor * (Mu_dy  \
-                         + q / hbar * O_dy * (EF - E) \
-                         - q / hbar * O * E_dy
-                         )
-        integraly = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
+        integrand = integrand_by_parts(kxa, kya, splE, splO, splM, EF=EF, dx=False)
+        integraly = simps(simps(feq * integrand, kya, axis=-1), kxa, axis=-1)
     else:
         integraly = np.zeros_like(integralx)
 
@@ -249,8 +279,12 @@ def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True, dy=True):
     else:
         integral = _ME_coef_integral
 
-    for i in range(N):
-        alpha[i] = integral(kxa, kya, splE[i], splO[i], splM[i], EF=EF, T=T,
-            dy=dy)
+    for n in range(N):
+        if n < N/2:  # bands 0 and 1
+            hole_band=True
+        else:
+            hole_band=False
+        alpha[n] = integral(kxa, kya, splE[n], splO[n], splM[n], EF=EF, T=T,
+            dy=dy, hole_band=hole_band)
 
     return alpha.sum(axis=0)  # sum over bands
