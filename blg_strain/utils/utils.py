@@ -2,6 +2,7 @@ import numpy as np
 from scipy.interpolate import RectBivariateSpline
 import datetime
 from .saver import Saver
+from skimage.measure import find_contours
 
 class Spline(RectBivariateSpline, Saver):
     '''
@@ -57,6 +58,32 @@ def densify(kx, ky, *args, Nkx_new=1000, Nky_new=1000):
             returns[i][idx] = arg[idx](kxdense, kydense)  # evaluate on new grid
 
     return (kxdense, kydense, *returns)
+
+
+def get_contours(kxa, kya, E, EF):
+    '''
+    Get contour E=EF for an energy band
+
+    Parameters:
+    - kxa, kya: Nkx, Nky arrays of kxa, kya points
+    - E: Nkx x Nky array of energy (eV)
+    - EF: Fermi level (eV)
+
+    Returns:
+    contours: list of (n,2)-ndarrays,
+        Each contour is an ndarray of shape ``(n, 2)``,
+        consisting of n ``(row, column)`` coordinates along the contour.
+    '''
+    contours = find_contours(E, EF)
+
+    # Transform to kxa, kya coordinates
+    scalex = np.ptp(kxa) / (len(kxa) - 1)
+    scaley = np.ptp(kya) / (len(kya) - 1)
+    for c in contours:
+        c[:, 0] = kxa.min() + c[:, 0] * scalex
+        c[:, 1] = kya.min() + c[:, 1] * scaley
+
+    return contours
 
 
 def get_splines(kx, ky, *args):
