@@ -4,6 +4,8 @@ from scipy.interpolate import RectBivariateSpline
 
 from .microscopic import check_f_boundaries, feq_func
 from .utils.const import q, hbar, hbar_J, muB, mu0, eps0, d, a0
+from .utils.utils import get_contours
+
 
 def n_valley_layer(kxa, kya, feq, Psi, layer=1):
     '''
@@ -74,8 +76,6 @@ def n_valley(kxa, kya, feq):
     Parameters:
     - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq: N(=4) x Nkx x Nky array of occupation for valley K or K'
-    - EF: Fermi energy (eV)
-    - T: temperature (K)
     '''
 
     check_f_boundaries(feq)  # check if f is nearly zero at boundaries of region
@@ -94,8 +94,6 @@ def ntot_func(kxa, kya, feq1, feq2):
     Parameters:
     - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - feq1, feq2: N(=4) x Nkx x Nky arrays of occupation for valley K and K'
-    - EF: Fermi energy (eV)
-    - T: temperature (K)
     '''
     return n_valley(kxa, kya, feq1) + n_valley(kxa, kya, feq2)
 
@@ -157,53 +155,7 @@ def integrand_by_parts(kxa, kya, splE, splO, splM, EF=0, dx=True):
     return integrand
 
 
-def _ME_coef_integral(kxa, kya, splE, splO, splM, EF=0, T=0, hole_band=False):
-    '''
-    Integrates over k space as part of the calculation for magnetoelectric
-    coefficient for one valley and one band. This quantity is dimensionless
-    and has x and y components. To calculate magnetization, compute the dot
-    product with an electric field vector, multiply by a relaxation time, and
-    divide by the vacuum permeability.
-
-    Parameters:
-    - kxa, kya: Nkx, Nky arrays of kxa, kya points
-    - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
-        moment) for the given band
-    - EF: Fermi energy (eV)
-    - T: Temperature (K)
-    - hole_band: if True, will change to using hole occupation; feq -> -(1-feq)
-
-    Returns:
-    - a length-2 array of x/y components of the dimensionless ME coefficient
-    '''
-    E = splE(kxa, kya)
-    feq = feq_func(E, EF=EF, T=T)
-
-    # Convert hole bands to hole occupation
-    if hole_band:
-        feq = -(1 - feq)  # holes contribute (-) to carrier density
-
-    if (np.abs(feq).max() < 1e-4):  # Band unoccupied!
-        return 0
-
-    O = splO(kxa, kya)
-    Mu = splM(kxa, kya)
-
-    # non-equilibrium occupation ("divided by" dot product with E field)
-    # we exclude equilibrium term that integrates to zero
-    # note prefactor hbar is in J * s
-    # factors of a0 to take care of integration and gradient w.r.t. k*a
-
-    f = a0 * q * mu0  / (hbar_J) * np.array(np.gradient(feq, kxa, kya,
-                                                        axis=(-2, -1)))
-
-    integrand = 1 / (2 * np.pi * a0) ** 2 * f * (Mu + q * O / hbar * (EF - E))
-
-    integral = simps(simps(integrand, kya, axis=-1), kxa, axis=-1)
-    return integral
-
-
-def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0, dy=True,
+def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, dy=True,
                                 hole_band=False):
     '''
     Integrates over k space as part of the calculation for magnetoelectric
@@ -219,37 +171,62 @@ def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, T=0, dy=True,
     - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - (splE, splO, splM) : splines for (energy / berry curvature / magnetic
         moment) for the given band
-    - EF: Fermi energy (eV)
-    - T: Temperature (K)
+    - EF: Fermi level (eV)
     - dy: if False, assumes the y component integrates to zero (may speed up)
     - hole_band: if True, will change to using hole occupation; feq -> -(1-feq)
 
     Returns:
     - a length-2 array of x/y components of the dimensionless ME coefficient
     '''
+
+    # Find the occupied states
     E = splE(kxa, kya)
-    feq = feq_func(E, EF=EF, T=T)
+    contours = get_contours(kxa, kya, E, EF)
 
-    # Convert hole bands to hole occupation
-    if hole_band:
-        feq = -(1 - feq)  # holes contribute (-) to carrier density
+    if len(contours) == 0:  # band unoccupied
+        return np.array([0, 0])
 
-    if (np.abs(feq).max() < 1e-4):  # Band unoccupied!
-        return np.array([0,0])
+    # Zoom into each pocket and calculate integral for each pocket
+    integralx, integraly = 0, 0
+    for c in contours:
+        # Find a new range of ks that just encompasses the occupied states
+        kxamin = c[:,0].min()
+        kxamax = c[:,0].max()
+        kyamin = c[:,1].min()
+        kyamax = c[:,1].max()
+        kxa_buf = c[:,0].ptp() * .05 # expand by 5% in each direction
+        kya_buf = c[:,1].ptp() * .05 # expand by 5% in each direction
 
-    integrand = integrand_by_parts(kxa, kya, splE, splO, splM, EF=EF, dx=True)
-    integralx = simps(simps(feq * integrand, kya, axis=-1), kxa, axis=-1)
+        kxa2 = np.linspace(kxamin - kxa_buf, kxamax + kxa_buf, len(kxa))
+        kya2 = np.linspace(kyamin - kya_buf, kyamax + kya_buf, len(kya))
 
-    if dy:
-        integrand = integrand_by_parts(kxa, kya, splE, splO, splM, EF=EF, dx=False)
-        integraly = simps(simps(feq * integrand, kya, axis=-1), kxa, axis=-1)
-    else:
-        integraly = np.zeros_like(integralx)
+        E2 = splE(kxa2, kya2)
+        contours2 = get_contours(kxa2, kya2, E2, EF)
+
+        if len(contours2) > 1:  # this should never happen
+            raise Exception('More than one contour found after zooming in!')
+
+        feq = E2 < EF
+        if hole_band:
+            feq = -(1 - feq)  # holes contribute (-) to carrier density
+
+        integrand = integrand_by_parts(kxa2, kya2, splE, splO, splM, EF=EF,
+                                        dx=True)
+        integralx += simps(simps(feq * integrand, kya2, axis=-1), kxa2, axis=-1)
+        print(integralx)
+
+        if dy:
+            integrand = integrand_by_parts(kxa2, kya2, splE, splO, splM, EF=EF,
+                                            dx=False)
+            integraly += simps(simps(feq * integrand, kya2, axis=-1), kxa2,
+                                        axis=-1)
+        else:
+            integraly += np.zeros_like(integralx)
 
     return np.array([integralx, integraly])
 
 
-def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True, dy=True):
+def ME_coef(kxa, kya, splE, splO, splM, EF=0, dy=True):
     '''
     Calculates the integral for ME coefficient for each of four bands and sums
     over bands. To calculate magnetization, compute the dot product with an
@@ -260,11 +237,7 @@ def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True, dy=True):
     - kxa, kya: Nkx, Nky arrays of kxa, kya points
     - (splE, splO, splM) : N(=4) array of splines for (energy / berry curvature
         / magnetic moment) in each band
-    - EF: Fermi energy (eV)
-    - T: Temperature (K)
-    - byparts: if True, will use the "integration by parts" version of the
-        integral (function `_M_integral_by_parts`). If False, will use the
-        function `_M_integral`
+    - EF: Fermi level (eV)
     - dy: if False, assumes the y component integrates to zero (speeds up calc)
 
 
@@ -274,17 +247,14 @@ def ME_coef(kxa, kya, splE, splO, splM, EF=0, T=0, byparts=True, dy=True):
     N = len(splE)  # number of bands
     alpha = np.zeros((N, 2))  # (number of bands) x (x, y)
 
-    if byparts:
-        integral = _ME_coef_integral_by_parts
-    else:
-        integral = _ME_coef_integral
+    integral = _ME_coef_integral_by_parts
 
     for n in range(N):
         if n < N/2:  # bands 0 and 1
             hole_band=True
         else:
             hole_band=False
-        alpha[n] = integral(kxa, kya, splE[n], splO[n], splM[n], EF=EF, T=T,
+        alpha[n] = integral(kxa, kya, splE[n], splO[n], splM[n], EF=EF,
             dy=dy, hole_band=hole_band)
 
     return alpha.sum(axis=0)  # sum over bands

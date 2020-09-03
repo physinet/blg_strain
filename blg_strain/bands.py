@@ -235,30 +235,28 @@ class BandStructure(Saver):
 class FilledBands(Saver):
     '''
     Class to contain information derived from a band structure given a specified
-    Fermi level EF and temperature T.
+    Fermi level EF at zero temperature.
     '''
-    def __init__(self, bs=Saver(), EF=0, T=0):
+    def __init__(self, bs=Saver(), EF=0):
         '''
         Parameters:
         - bs: an instance of the `BandStructure` class
         - EF: Fermi level relative to the center of the band gap.
-        - T: Temperature (K)
         '''
         self.bs = bs
         self.EF = EF
-        self.T = T
 
 
     def calculate(self, Nkx=2000, Nky=2000):
         '''
         Calculate carrier density, displacement field, and magnetoelectric
-        coefficient from the given band structure, Fermi level, and temperature.
+        coefficient from the given band structure, Fermi level at zero T.
 
         Nkx, NKy - num points to use in the grid to calculate ME coef
         '''
 
         bs = self.bs
-        feq_K = feq_func(bs.E, self.EF, self.T)
+        feq_K = feq_func(bs.E, self.EF)
         # Convert hole bands to hole occupation
         feq_K[:2] = -(1 - feq_K[:2])  # holes contribute (-) to carrier density
 
@@ -283,7 +281,7 @@ class FilledBands(Saver):
             dy = True
         # dy = True  # Always calculate y component
         self.alpha = 2 * ME_coef(self.kxa, self.kya, bs.splE, bs.splO, bs.splM,
-            self.EF, self.T, dy=dy)
+            self.EF, dy=dy)
 
 
     def save(self):
@@ -295,8 +293,8 @@ class FilledBands(Saver):
         class.
         '''
         path = os.path.splitext(self.bs.filename)[0]
-        filename = 'FilledBands_Nkx{:d}_Nky{:d}_EF{:.3f}_T{:.1f}.h5'.format(
-            self.Nkx, self.Nky, self.EF*1e3, self.T
+        filename = 'FilledBands_Nkx{:d}_Nky{:d}_EF{:.3f}.h5'.format(
+            self.Nkx, self.Nky, self.EF*1e3
         )
         self.filename = os.path.join(path, filename)
 

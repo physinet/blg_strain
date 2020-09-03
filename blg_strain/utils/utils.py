@@ -77,8 +77,8 @@ def get_contours(kxa, kya, E, EF):
     contours = find_contours(E, EF)
 
     # Transform to kxa, kya coordinates
-    scalex = np.ptp(kxa) / (len(kxa) - 1)
-    scaley = np.ptp(kya) / (len(kya) - 1)
+    scalex = kxa.ptp() / (len(kxa) - 1)
+    scaley = kya.ptp() / (len(kya) - 1)
     for c in contours:
         c[:, 0] = kxa.min() + c[:, 0] * scalex
         c[:, 1] = kya.min() + c[:, 1] * scaley
