@@ -213,7 +213,6 @@ def _ME_coef_integral_by_parts(kxa, kya, splE, splO, splM, EF=0, dy=True,
         integrand = integrand_by_parts(kxa2, kya2, splE, splO, splM, EF=EF,
                                         dx=True)
         integralx += simps(simps(feq * integrand, kya2, axis=-1), kxa2, axis=-1)
-        print(integralx)
 
         if dy:
             integrand = integrand_by_parts(kxa2, kya2, splE, splO, splM, EF=EF,
