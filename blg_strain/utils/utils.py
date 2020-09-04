@@ -32,6 +32,32 @@ class Spline(RectBivariateSpline, Saver):
         return obj
 
 
+def contour_grid(c, Nx=500, Ny=500, buffer=0.1):
+    '''
+    Calculates a new kx, ky grid for a given contour `c` encompassing the
+    points in the contour, expanded by a buffer (default 10% in all directions).
+
+    Parameters:
+    c: an M x 2 array of kx and ky contour points
+    Nx, Ny: number of points for the new grid
+    buffer: factor by which to expand the grid (to ensure entire contour is
+        contained within the window)
+    '''
+    xmin = c[:,0].min()
+    xmax = c[:,0].max()
+    ymin = c[:,1].min()
+    ymax = c[:,1].max()
+
+    x_range = c[:,0].ptp()
+    y_range = c[:,1].ptp()
+
+    # New grid, expand by buffer in each direction
+    x = np.linspace(xmin - x_range * buffer, xmax + x_range * buffer , Nx)
+    y = np.linspace(ymin - y_range * buffer, ymax + y_range * buffer , Ny)
+
+    return x, y
+
+
 def densify(kx, ky, *args, Nkx_new=1000, Nky_new=1000):
     '''
     For all args (which are arrays of spline interpolations), evaluates the

@@ -6,8 +6,8 @@ from .hamiltonian import H_4x4
 from .berry import berry_mu
 from .microscopic import feq_func
 from .macroscopic import n_valley_layer, D_field, ME_coef
-from .utils.utils import make_grid, get_splines, densify
-
+from .utils.utils import make_grid, get_splines, densify, \
+                         get_contours, contour_grid
 from .utils.const import K, a0
 from .utils.saver import Saver
 
@@ -247,31 +247,55 @@ class FilledBands(Saver):
         self.EF = EF
 
 
-    def calculate(self, Nkx=2000, Nky=2000):
+    def _get_contours(self, Nkx=500, Nky=500):
+        '''
+        Calculate contours for Fermi pockets and generate finer grids within
+        bounding boxes encompassing the occupied states.
+        `self.contours` is a length-4 list of lists of contours for each band.
+        For example, if band 2 has two contours, `self.contours` will have the
+        following structure: `[[], [], [c1, c2], []]`. Here, c1 is an M x 2
+        array of kx and ky coordinates for the contour. M is set by the
+        `skimage.measure.find_contours` function.
+
+        Parameters:
+        Nkx, Nky - number of points to use in the grid encompassing each contour
+        '''
+        self.Nkx, self.Nky = Nkx, Nky
+        N = self.bs.E.shape[0]  # number of bands
+        contours = [get_contours(self.bs.kxa, self.bs.kya, self.bs.E[n],
+                        self.EF) for n in range(N)]
+
+        # Recalculate contours over finer grid
+        contours2 = [[] for n in range(N)]
+        for n in range(N):
+            for c in contours[n]:
+                kxa2, kya2 = contour_grid(c, Nkx, Nky)
+
+                E2 = self.bs.splE[n](kxa2, kya2)
+                contours2[n] += get_contours(kxa2, kya2, E2, self.EF)
+        self.contours = contours2
+
+
+    def calculate(self, Nkx=500, Nky=500):
         '''
         Calculate carrier density, displacement field, and magnetoelectric
         coefficient from the given band structure, Fermi level at zero T.
 
         Nkx, NKy - num points to use in the grid to calculate ME coef
         '''
-
         bs = self.bs
-        feq_K = feq_func(bs.E, self.EF)
-        # Convert hole bands to hole occupation
-        feq_K[:2] = -(1 - feq_K[:2])  # holes contribute (-) to carrier density
+
+        feq = bs.E < self.EF
+        feq[:2] = -(1 - feq[:2])  # hole bands
 
         # Carrier density (m^-2) (contributions from each layer)
         # factor of 2 for valleys
-        self.n1 = 2 * n_valley_layer(bs.kxa, bs.kya, feq_K, bs.Psi, layer=1)
-        self.n2 = 2 * n_valley_layer(bs.kxa, bs.kya, feq_K, bs.Psi, layer=2)
+        self.n1 = 2 * n_valley_layer(bs.kxa, bs.kya, feq, bs.Psi, layer=1)
+        self.n2 = 2 * n_valley_layer(bs.kxa, bs.kya, feq, bs.Psi, layer=2)
         self.n = self.n1 + self.n2
 
         # Displacement field (V/m)
         self.D = D_field(bs.Delta, 2 * self.n1, 2 * self.n2)
-
-        # Make dense grid
-        self.Nkx, self.Nky = Nkx, Nky
-        self.kxa, self.kya, = densify(bs.kxa, bs.kya, Nkx_new=Nkx, Nky_new=Nky)
 
         # ME coefficient with factor of 2 for valley
         # Skips calculating y component if strain is along major crystal axis
@@ -280,8 +304,23 @@ class FilledBands(Saver):
         else:
             dy = True
         # dy = True  # Always calculate y component
-        self.alpha = 2 * ME_coef(self.kxa, self.kya, bs.splE, bs.splO, bs.splM,
-            self.EF, dy=dy)
+
+        self._get_contours()  # get Fermi surfaces
+
+        # calculate integral for each pocket
+        alphax, alphay = 0, 0
+        for n in range(self.bs.E.shape[0]):  # loop over bands
+            if n < 2:
+                hole_band=True
+            for i, c in enumerate(self.contours[n]):
+                kxa, kya = contour_grid(c, Nkx, Nky)
+
+                ax, ay = 2 * ME_coef(kxa, kya, bs.splE[n], bs.splO[n],
+                               bs.splM[n], self.EF, dy=dy, hole_band=hole_band)
+                alphax += ax
+                alphay += ay
+
+        self.alpha = np.array([alphax, alphay])
 
 
     def save(self):
