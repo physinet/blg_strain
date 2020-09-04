@@ -55,7 +55,7 @@ def load(path, parameters_only=False, load_summary=True):
 
         for j, fb_path in enumerate(fb_paths):
             start = fb_path.find('_EF') + 3  # start of EF value
-            end = fb_path.find('_T') # end of EF value
+            end = fb_path.find('.h5') # end of EF value
             EFs[j] = float(fb_path[start:end])
 
             if parameters_only:

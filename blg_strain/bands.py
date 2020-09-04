@@ -285,7 +285,7 @@ class FilledBands(Saver):
         '''
         bs = self.bs
 
-        feq = bs.E < self.EF
+        feq = (bs.E < self.EF).astype(int)
         feq[:2] = -(1 - feq[:2])  # hole bands
 
         # Carrier density (m^-2) (contributions from each layer)
