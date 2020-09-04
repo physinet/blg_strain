@@ -312,6 +312,8 @@ class FilledBands(Saver):
         for n in range(self.bs.E.shape[0]):  # loop over bands
             if n < 2:
                 hole_band=True
+            else:
+                hole_band=False
             for i, c in enumerate(self.contours[n]):
                 kxa, kya = contour_grid(c, Nkx, Nky)
 
