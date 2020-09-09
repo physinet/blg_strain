@@ -1,0 +1,49 @@
+#### MATPLOTLIBRC FORMAT
+pdf.fonttype       : 42         ## Output Type 3 (Type3) or Type 42 (TrueType)
+svg.fonttype :   none         ## How to handle SVG fonts:
+   ##     none: Assume fonts are installed on the machine where the SVG will be viewed.
+   ##     path: Embed characters as paths -- supported by most SVG renderers
+
+font.family         : sans-serif
+font.sans-serif     : Avenir
+font.size           : 10
+
+mathtext.rm  : Avenir
+mathtext.it  : Avenir
+mathtext.fontset : stix
+text.latex.preamble: \usepackage{amsmath}
+
+## text.usetex: False
+## mathtext.fontset: cm
+## mathtext.fontset: stixsans
+## text.latex.unicode: True
+## text.latex.preamble: \usepackage{helvet} \renewcommand{\familydefault}{\sfdefault}
+
+xtick.labelsize      : 10 ## fontsize of the tick labels
+ytick.labelsize      : 10 ## fontsize of the tick labels
+xtick.direction      : in    ## direction: in, out, or inout
+ytick.direction      : in    ## direction: in, out, or inout
+
+axes.titlepad       : 10     ## pad between axes and title in points
+axes.labelsize      : 10  ## fontsize of the x any y labels
+
+legend.frameon       : False     ## if True, draw the legend on a background patch
+legend.fontsize      : 10
+
+lines.linewidth   : 0.75     ## line width in points
+lines.markersize  : 3            ## markersize, in points
+
+errorbar.capsize  : 1
+
+## mathtext.rm  : Helvetica
+## mathtext.it  : Helvetica:italic
+## mathtext.fontset : stix ## Should be 'dejavusans' (default),
+                               ## 'dejavuserif', 'cm' (Computer Modern), 'stix',
+                               ## 'stixsans' or 'custom'
+mathtext.fallback_to_cm : False  ## When True, use symbols from the Computer Modern
+                                 ## fonts when a symbol can not be found in one of
+                                 ## the custom math fonts.
+#mathtext.default : regular ## The default font to use for math.
+                      ## Can be any of the LaTeX font names, including
+                      ## the special name "regular" for the same font
+                      ## used in regular text.
