@@ -1,7 +1,7 @@
 # Calculation of microscopic quantities from the bands
 
 import numpy as np
-from .utils.const import kB, hbar, hbar_J, m_e, a, q
+from .utils.const import kB, hbar, hbar_J, m_e, a0, q
 from scipy.interpolate import RectBivariateSpline
 from scipy.integrate import simps
 
@@ -38,6 +38,7 @@ def f_relaxation(kxa, kya, splE, EF, T, Efield, tau, N):
     - tau: relaxation time (s)
     - N: number of points to use in integration
     '''
+    raise Exception('Gives inaccurate results!')
     qxa = np.linspace(kxa.min(), kxa.max(), N)
 
     Qxa, Kxa, Kya = np.meshgrid(qxa, kxa, kya, indexing='ij')
@@ -46,8 +47,8 @@ def f_relaxation(kxa, kya, splE, EF, T, Efield, tau, N):
         Qxa[:, i] = np.linspace(kxa.min()-1e-10, Kxa[0, i], N)
 
     f0 = feq_func(splE(Qxa, Kya, grid=False), EF, T=T)
-    integrand = np.exp(-hbar_J * (Kxa - Qxa) / (tau * Efield * q * a)) \
-                * f0 / (tau * Efield * q)
+    integrand = np.exp(-hbar_J * (Kxa - Qxa) / (tau * Efield * q * a0)) \
+                * f0 * hbar_J / (tau * Efield * q * a0)
 
     return simps(integrand, Qxa, axis=0)
 
