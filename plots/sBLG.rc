@@ -6,7 +6,7 @@ svg.fonttype :   none         ## How to handle SVG fonts:
 
 font.family         : sans-serif
 font.sans-serif     : Avenir
-font.size           : 10
+font.size           : 8
 
 mathtext.rm  : Avenir
 mathtext.it  : Avenir
@@ -19,8 +19,8 @@ text.latex.preamble: \usepackage{amsmath}
 ## text.latex.unicode: True
 ## text.latex.preamble: \usepackage{helvet} \renewcommand{\familydefault}{\sfdefault}
 
-xtick.labelsize      : 10 ## fontsize of the tick labels
-ytick.labelsize      : 10 ## fontsize of the tick labels
+xtick.labelsize      : 8 ## fontsize of the tick labels
+ytick.labelsize      : 8 ## fontsize of the tick labels
 xtick.direction      : in    ## direction: in, out, or inout
 ytick.direction      : in    ## direction: in, out, or inout
 
@@ -28,7 +28,7 @@ axes.titlepad       : 10     ## pad between axes and title in points
 axes.labelsize      : 10  ## fontsize of the x any y labels
 
 legend.frameon       : False     ## if True, draw the legend on a background patch
-legend.fontsize      : 10
+legend.fontsize      : 8
 
 lines.linewidth   : 0.75     ## line width in points
 lines.markersize  : 3            ## markersize, in points
