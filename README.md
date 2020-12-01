@@ -13,7 +13,7 @@ Please also see the [`example.ipynb`](https://github.com/physinet/blg_strain/blo
 ### Define the lattice
 The `StrainedLattice` class stores information about the sBLG lattice, where the strain is parameterized by the variables `eps` (strain magnitude) and `theta` (strain angle relative to the $x$ axis).
 Individual hopping parameters can be turned off using the `turn_off` keyword argument.
-```
+```python
 from blg_strain.lattice import StrainedLattice
 
 sl = StrainedLattice(eps=0.01, theta=0)  # 1% uniaxial tensile strain along x
@@ -31,7 +31,7 @@ The `BandStructure` class takes as arguments:
 - `window`, width of the window of sampled momentum space
 - `Delta`, the interlayer asymmetry
 
-```
+```python
 from blg_strain.bands import BandStructure
 
 bs = BandStructure(sl=sl, window=0.1, Delta=0.01)
@@ -47,7 +47,7 @@ The most relevant calculated attributes of the `bs` object are:
 ### Calculate properties of bands with filled states
 The `FilledBands` class stores the carrier density, displacement field, and magnetoelectric coefficient for a band structure filled up to a given Fermi level `EF` (`EF=0` defined as the middle of the band gap).
 These quantities are computed by integrating over the `window` defined in the `BandStructure` instance `bs`, which can describe the entire Brillouin zone as long as the Fermi surface lies completely within the window.
-```
+```python
 from blg_strain.bands import FilledBands
 
 fb = FilledBands(bs=bs, EF=0.01)
@@ -62,7 +62,7 @@ The most relevant calculated attributes of the `fb` object are:
 Each of the above classes inherits from `blg_strain.utils.saver.Saver`, which enables straightforward saving and loading to the [HDF5 file format](https://www.h5py.org/).
 Because of the hierarchical nature of the three classes (`FilledBands` depends on `BandStructure` depends on `StrainedLattice`), `BandStructure` objects are saved in a subdirectory of the directory where the corresponding `StrainedLattice` object is saved, and `FilledBands` objects are saved in a subdirectory of the directory where the corresponding `BandStructure` object is saved.
 The following code can be used to save the objects created in the examples above:
-```
+```python
 sl.save('example')
 bs.save()
 fb.save()
@@ -83,7 +83,7 @@ It is often useful to create files consisting of only the final derived quantiti
 Loading such a "summary" file can take considerably less time than loading the individual `FilledBands` files.
 The function `blg_strain.utils.saver.load` creates a summary file in the `StrainedLattice` directory.
 Subsequently calling the `load` function will load from `summary.h5` instead of re-making the summary file:
-```
+```python
 from blg_strain.utils.saver import load
 Deltas, EFs, ns, Ds, alphas = load(sl_path)
 ```
