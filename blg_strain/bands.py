@@ -117,7 +117,7 @@ def fix_first_component_sign(Psi):
 class BandStructure(Saver):
     '''
     Contains calculated band structure around the K Dirac point for given
-    strained lattice and choice of interlayer asymmetry.
+    strained lattice and interlayer asymmetry.
     '''
     def __init__(self, sl=Saver(), window=0.1, Delta=0):
         '''
@@ -323,7 +323,7 @@ class FilledBands(Saver):
                 alphay += ay
 
         self.alpha = np.array([alphax, alphay])
-        
+
 
     def save(self):
         '''
