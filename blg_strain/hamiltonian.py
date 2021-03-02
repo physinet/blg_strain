@@ -72,6 +72,9 @@ def dH_4x4(Kxa, Kya, sl):
                                                sl.gamma3s, sl.gamma4s):
         dH0x += -gamma0 * np.exp(1j * Ka.dot(delta)) * 1j * delta[0]
         dH0y += -gamma0 * np.exp(1j * Ka.dot(delta)) * 1j * delta[1]
+        # H3 involves hopping with bond vectors delta that have negative
+        # components compared to other bonds. So this negative sign does NOT
+        # appear in front of the derivative when doing the chain rule.
         dH3x += gamma3 * np.exp(-1j * Ka.dot(delta)) * 1j * delta[0]
         dH3y += gamma3 * np.exp(-1j * Ka.dot(delta)) * 1j * delta[1]
         dH4x += gamma4 * np.exp(1j * Ka.dot(delta)) * 1j * delta[0]
