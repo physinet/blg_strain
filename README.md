@@ -1,5 +1,6 @@
 # blg_strain - calculations for magnetoelectric effect in strained bilayer graphene
-This is a Python package used to perform the calculations described in an upcoming article on the orbital magnetoelectric effect in strained bilayer graphene. When available, a link to the accompanying article will be provided here.
+This is a Python package used to perform the calculations described in the article ["Electrically tunable and reversible magnetoelectric coupling in strained bilayer graphene
+" (arXiv:2103.04124)](https://arxiv.org/abs/2103.04124).
 
 ## Installation
 Download this repository, navigate to the directory in a command prompt, and run
@@ -7,7 +8,7 @@ Download this repository, navigate to the directory in a command prompt, and run
 
 ## Quickstart
 Below is a description of the basic usage of this package, lacking however explicit details about the strained bilayer graphene (sBLG) model.
-For a detailed explanation of the model, please see the accompanying article (when available).
+For a detailed explanation of the model, please see the accompanying article.
 Please also see the [`example.ipynb`](https://github.com/physinet/blg_strain/blob/master/example.ipynb) notebook, which has the below commands and accompanying plots of the calculated quantities.
 
 ### Define the lattice
