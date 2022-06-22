@@ -10,7 +10,7 @@ setup(name='blg_strain',
     packages=['blg_strain'],
     install_requires=[
         'matplotlib==3.3.3',
-        'numpy==1.18.1',
+        'numpy==1.22.0',
         'scipy==1.3.2',
         'h5py==2.10.0',
         'scikit-image==0.17.2'
