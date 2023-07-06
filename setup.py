@@ -11,7 +11,7 @@ setup(name='blg_strain',
     install_requires=[
         'matplotlib==3.3.3',
         'numpy==1.18.1',
-        'scipy==1.3.2',
+        'scipy==1.10.0',
         'h5py==2.10.0',
         'scikit-image==0.17.2'
     ],
